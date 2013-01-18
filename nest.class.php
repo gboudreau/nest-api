@@ -41,12 +41,14 @@ class Nest {
 		$structures = (array) $this->last_status->structure;
 		$user_structures = array();
 		foreach ($structures as $structure) {
+			$weather = $this->doGET("https://home.nest.com/api/0.1/weather/forecast/" . $structure->postal_code);
 			$user_structures[] = (object) array(
 				'name' => $structure->name,
 				'address' => $structure->street_address,
 				'city' => $structure->location,
 				'postal_code' => $structure->postal_code,
 				'country' => $structure->country_code,
+				'outside_temperature' => (float) $weather->now->current_temperature,
 				'away' => $structure->away,
 				'away_last_changed' => date('Y-m-d H:i:s', $structure->away_timestamp),
 				'thermostats' => array_map(array('Nest', 'cleanDevices'), $structure->devices)
@@ -270,7 +272,7 @@ class Nest {
 	    curl_setopt($ch, CURLOPT_URL, $url);
 	    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
 	    curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-	    curl_setopt($ch, CURLOPT_HEADER, TRUE);
+	    curl_setopt($ch, CURLOPT_HEADER, FALSE);
 	    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
 	    curl_setopt($ch, CURLOPT_AUTOREFERER, TRUE);
 	    curl_setopt($ch, CURLOPT_USERAGENT, self::user_agent); 
@@ -300,8 +302,7 @@ class Nest {
 	        return $response;
 	    }
 	    
-	    $body = substr($response, -$info['download_content_length']);
-        $json = json_decode($body);
+        $json = json_decode($response);
 
 	    if ($info['http_code'] == 400) {
 	        die("$json->error: $json->error_description\n");
