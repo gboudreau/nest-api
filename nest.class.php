@@ -9,6 +9,8 @@ define('FAN_MODE_AUTO', 'auto');
 define('FAN_MODE_ON', 'on');
 define('AWAY_MODE_ON', TRUE);
 define('AWAY_MODE_OFF', FALSE);
+define('DUALFUEL_BREAKPOINT_ALWAYS_PRIMARY', 'always-primary');
+define('DUALFUEL_BREAKPOINT_ALWAYS_ALT', 'always-alt');
 
 class Nest {
 	const user_agent = 'Nest/2.1.3 CFNetwork/548.0.4';
@@ -150,6 +152,17 @@ class Nest {
 	    $data = json_encode(array('away' => $away, 'away_timestamp' => time(), 'away_setter' => 0));
 		$structure_id = $this->getDeviceInfo($serial_number)->location;
 	    return $this->doPOST("/v2/put/structure." . $structure_id, $data);
+	}
+	
+	public function setDualFuelBreakpoint($breakpoint, $serial_number=null) {
+	    $serial_number = $this->getDefaultSerial($serial_number);
+		if (!is_string($breakpoint)) {
+		    $breakpoint = $this->temperatureInCelsius($breakpoint, $serial_number);
+		    $data = json_encode(array('dual_fuel_breakpoint_override' => 'none', 'dual_fuel_breakpoint' => $breakpoint));
+		} else {
+			$data = json_encode(array('dual_fuel_breakpoint_override' => $breakpoint));
+		}
+	    return $this->doPOST("/v2/put/device." . $serial_number, $data);
 	}
 
 	/* Helper functions */
