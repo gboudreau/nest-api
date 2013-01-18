@@ -81,6 +81,7 @@ class Nest {
 				'humidity' => $this->last_status->device->{$serial_number}->current_humidity,
 				'ac' => $this->last_status->shared->{$serial_number}->hvac_ac_state,
 				'heat' => $this->last_status->shared->{$serial_number}->hvac_heater_state,
+				'alt_heat' => $this->last_status->shared->{$serial_number}->hvac_alt_heat_state,
 				'fan' => $this->last_status->shared->{$serial_number}->hvac_fan_state,
 				'auto_away' => $this->last_status->shared->{$serial_number}->auto_away,
 				'manual_away' => $manual_away,
