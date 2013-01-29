@@ -169,9 +169,12 @@ class Nest {
 
 	public function getStatus() {
 	    $status = $this->doGET("/v2/mobile/" . $this->user);
-        $this->last_status = $status;
-        $this->saveCache();
-        return $status;
+	    if (!is_object($status)) {
+            die("Couldn't get status from NEST API: $status\n");
+	    }
+	    $this->last_status = $status;
+	    $this->saveCache();
+	    return $status;
 	}
 
 	public static function cleanDevices($device) {
@@ -264,7 +267,7 @@ class Nest {
 	    return $this->doRequest('POST', $url, $data_fields);
 	}
 
-    private function doRequest($method, $url, $data_fields=null) {
+    private function doRequest($method, $url, $data_fields=null, $with_retry=TRUE) {
 	    $ch = curl_init();
 	    if ($url[0] == '/') {
 	        $url = $this->transport_url . $url;
@@ -303,7 +306,6 @@ class Nest {
         }
 	    $response = curl_exec($ch);
 	    $info = curl_getinfo($ch);
-	    curl_close($ch);
 	    
 	    if ($info['http_code'] == 401 && $this->use_cache()) {
 	        // Received 401, and was using cached data; let's try to re-login and retry.
@@ -313,7 +315,13 @@ class Nest {
 	        return $this->doRequest($url, $data_fields);
 	    }
 	    if (!$response) {
-	        return $response;
+	        if ($with_retry) {
+                // Try again, without the cache this time
+                unlink($this->cache_file);
+                return $this->doRequest($method, $url, $data_fields, FALSE);
+	        } else {
+                return "Error with request to $url: " . curl_error($ch);
+            }
 	    }
 	    
         $json = json_decode($response);
