@@ -225,6 +225,9 @@ class Nest {
 	        return;
 	    }
 	    $result = $this->doPOST(self::login_url, array('username' => USERNAME, 'password' => PASSWORD));
+		if (!isset($result->urls)) {
+			die("Error: response to login request doesn't contain required transport URL. Response: '" . var_export($result, TRUE) . "'\n");
+		}
 	    $this->transport_url = $result->urls->transport_url;
 	    $this->access_token = $result->access_token;
 	    $this->userid = $result->userid;
@@ -307,24 +310,25 @@ class Nest {
 	    $response = curl_exec($ch);
 	    $info = curl_getinfo($ch);
 	    
-	    if ($info['http_code'] == 401 && $this->use_cache()) {
-	        // Received 401, and was using cached data; let's try to re-login and retry.
-	        unlink($this->cookie_file);
-	        unlink($this->cache_file);
-	        $this->login();
-	        return $this->doRequest($url, $data_fields);
-	    }
-	    if (!$response) {
+	    if (($info['http_code'] == 401 || !$response) && $this->use_cache()) {
 	        if ($with_retry) {
-                // Try again, without the cache this time
-                unlink($this->cache_file);
-                return $this->doRequest($method, $url, $data_fields, FALSE);
-	        } else {
-                return "Error with request to $url: " . curl_error($ch);
-            }
+	            // Received 401, and was using cached data; let's try to re-login and retry.
+	            @unlink($this->cookie_file);
+	            @unlink($this->cache_file);
+                    if ($info['http_code'] == 401) {
+	                $this->login();
+                    }
+	            return $this->doRequest($url, $data_fields, FALSE);
+                } else {
+                    return "Error with request to $url: " . curl_error($ch);
+                }
 	    }
 	    
         $json = json_decode($response);
+
+		if ($json === NULL) {
+			die("Error: Response from server is not valid JSON data. Response: '$response'\n");
+		}
 
 	    if ($info['http_code'] == 400) {
 	        die("$json->error: $json->error_description\n");
