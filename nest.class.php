@@ -315,13 +315,13 @@ class Nest {
 	            // Received 401, and was using cached data; let's try to re-login and retry.
 	            @unlink($this->cookie_file);
 	            @unlink($this->cache_file);
-                    if ($info['http_code'] == 401) {
+                if ($info['http_code'] == 401) {
 	                $this->login();
-                    }
-	            return $this->doRequest($url, $data_fields, FALSE);
-                } else {
-                    return "Error with request to $url: " . curl_error($ch);
                 }
+	            return $this->doRequest($url, $data_fields, FALSE);
+            } else {
+                return "Error with request to $url: " . curl_error($ch);
+            }
 	    }
 	    
         $json = json_decode($response);
