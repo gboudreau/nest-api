@@ -326,7 +326,7 @@ class Nest {
 	    
         $json = json_decode($response);
 
-		if ($json === NULL) {
+		if ($json === NULL && $method == 'GET') {
 			die("Error: Response from request to $url is not valid JSON data. Response: '$response'\n");
 		}
 
