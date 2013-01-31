@@ -318,7 +318,7 @@ class Nest {
                 if ($info['http_code'] == 401) {
 	                $this->login();
                 }
-	            return $this->doRequest($url, $data_fields, FALSE);
+	            return $this->doRequest($method, $url, $data_fields, FALSE);
             } else {
                 return "Error with request to $url: " . curl_error($ch);
             }
@@ -327,7 +327,7 @@ class Nest {
         $json = json_decode($response);
 
 		if ($json === NULL) {
-			die("Error: Response from server is not valid JSON data. Response: '$response'\n");
+			die("Error: Response from request to $url is not valid JSON data. Response: '$response'\n");
 		}
 
 	    if ($info['http_code'] == 400) {
