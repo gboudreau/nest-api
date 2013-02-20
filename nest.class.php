@@ -46,7 +46,7 @@ class Nest {
 			$weather = $this->doGET("https://home.nest.com/api/0.1/weather/forecast/" . $structure->postal_code);
 			$user_structures[] = (object) array(
 				'name' => $structure->name,
-				'address' => $structure->street_address,
+				'address' => !empty($structure->street_address) ? $structure->street_address : NULL,
 				'city' => $structure->location,
 				'postal_code' => $structure->postal_code,
 				'country' => $structure->country_code,
@@ -164,6 +164,12 @@ class Nest {
 		}
 	    return $this->doPOST("/v2/put/device." . $serial_number, $data);
 	}
+
+    public function setHumidity($humidity, $serial_number=null) {
+        $serial_number = $this->getDefaultSerial($serial_number);
+        $data = json_encode(array('target_humidity' => $humidity));
+        return $this->doPOST("/v2/put/device." . $serial_number, $data);
+    }
 
 	/* Helper functions */
 
