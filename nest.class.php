@@ -68,6 +68,8 @@ class Nest {
 		$target_mode = $this->last_status->shared->{$serial_number}->target_temperature_type;
 		if ($manual_away || $mode == 'away' || $this->last_status->shared->{$serial_number}->auto_away !== 0) {
 			$mode = $mode . ',away';
+			$target_mode = 'range';
+			$target_temperatures = array($this->last_status->device->{$serial_number}->away_temperature_low, $this->last_status->device->{$serial_number}->away_temperature_high);
 		} else if ($mode == 'range') {
 			$target_mode = 'range';
 			$target_temperatures = array($this->last_status->shared->{$serial_number}->target_temperature_low, $this->last_status->shared->{$serial_number}->target_temperature_high);
