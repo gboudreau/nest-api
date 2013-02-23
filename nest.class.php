@@ -116,8 +116,28 @@ class Nest {
 		);
 	}
 
-	public function setTargetTemperatureMode($mode, $serial_number=null) {
+	public function setTargetTemperatureMode($mode, $temperature, $serial_number=null) {
 	    $serial_number = $this->getDefaultSerial($serial_number);
+
+        if ($mode == TARGET_TEMP_MODE_RANGE) {
+            if (!is_array($temperature) || count($temperature) != 2 || !is_numeric($temperature[0]) || !is_numeric($temperature[1])) {
+                echo "Error: when using TARGET_TEMP_MODE_RANGE, you need to set the target temperatures (second argument of setTargetTemperatureMode) using an array of two numeric values.\n";
+                return FALSE;
+            }
+    	    $temp_low = $this->temperatureInCelsius($temperature[0], $serial_number);
+    		$temp_high = $this->temperatureInCelsius($temperature[1], $serial_number);
+    	    $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature_low' => $temp_low, 'target_temperature_high' => $temp_high));
+    	    $set_temp_result = $this->doPOST("/v2/put/shared." . $serial_number, $data);
+        } else {
+            if (!is_numeric($temperature)) {
+                echo "Error: when using TARGET_TEMP_MODE_HEAT or TARGET_TEMP_MODE_COLD, you need to set the target temperature (second argument of setTargetTemperatureMode) using an numeric value.\n";
+                return FALSE;
+            }
+    	    $temperature = $this->temperatureInCelsius($temperature, $serial_number);
+    	    $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature' => $temperature));
+    	    $set_temp_result = $this->doPOST("/v2/put/shared." . $serial_number, $data);
+        }
+
 	    $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature_type' => $mode));
 	    return $this->doPOST("/v2/put/shared." . $serial_number, $data);
 	}

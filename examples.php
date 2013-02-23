@@ -38,7 +38,11 @@ $success = $nest->setTargetTemperatures(23.0, 26.0);
 var_dump($success);
 
 echo "Setting target temperature mode...\n";
-$success = $nest->setTargetTemperatureMode(TARGET_TEMP_MODE_RANGE); // Available: TARGET_TEMP_MODE_COOL, TARGET_TEMP_MODE_HEAT, TARGET_TEMP_MODE_RANGE
+$success = $nest->setTargetTemperatureMode(TARGET_TEMP_MODE_COOL, 26.0); // Available: TARGET_TEMP_MODE_COOL, TARGET_TEMP_MODE_HEAT, TARGET_TEMP_MODE_RANGE
+var_dump($success);
+
+echo "Setting target temperature mode (range)...\n";
+$success = $nest->setTargetTemperatureMode(TARGET_TEMP_MODE_RANGE, array(23.0, 26.0)); // Available: TARGET_TEMP_MODE_COOL, TARGET_TEMP_MODE_HEAT, TARGET_TEMP_MODE_RANGE
 var_dump($success);
 
 echo "Setting fan mode...\n";

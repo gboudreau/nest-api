@@ -46,8 +46,7 @@ See examples.php for details, but here's a Quick Start.
     printf("Current temperature: %.02f degrees %s\n", $infos->current_state->temperature, $infos->scale);
     
     // Cool to 23
-    $nest->setTargetTemperatureMode(TARGET_TEMP_MODE_COOL);
-    $nest->setTargetTemperature(23);
+    $nest->setTargetTemperatureMode(TARGET_TEMP_MODE_COOL, 23.0);
     
     // Set Away mode
     $nest->setAway(TRUE);
