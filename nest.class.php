@@ -50,7 +50,7 @@ class Nest {
 				'city' => $structure->location,
 				'postal_code' => $structure->postal_code,
 				'country' => $structure->country_code,
-				'outside_temperature' => (float) $weather->now->current_temperature,
+				'outside_temperature' => isset($weather->now) ? (float) $weather->now->current_temperature : NULL,
 				'away' => $structure->away,
 				'away_last_changed' => date('Y-m-d H:i:s', $structure->away_timestamp),
 				'thermostats' => array_map(array('Nest', 'cleanDevices'), $structure->devices)
