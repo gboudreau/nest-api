@@ -14,8 +14,10 @@ Features
     - Target temperature mode, fan mode
     - AC, heat, and fan status: on or off
     - Manual and automatic away mode
-    - location information
-    - network information (local & WAN IPs, MAC address, online status)
+    - Location information
+    - Network information (local & WAN IPs, MAC address, online status)
+    - Currently active schedule (by day)
+    - Next scheduled event
 - Setters:
     - Target temperatures (single, or range)
     - Target temperature mode: cool, heat, range

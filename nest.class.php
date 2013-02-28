@@ -16,6 +16,7 @@ class Nest {
 	const user_agent = 'Nest/2.1.3 CFNetwork/548.0.4';
 	const protocol_version = 1;
 	const login_url = 'https://home.nest.com/user/login';
+	private $days_maps = array('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun');
 	
 	private $transport_url;
 	private $access_token;
@@ -59,6 +60,55 @@ class Nest {
 		return $user_structures;
 	}
 
+	public function getDeviceSchedule($serial_number=null) {
+		$this->getStatus();
+	    $serial_number = $this->getDefaultSerial($serial_number);
+		$schedule_days = $this->last_status->schedule->{$serial_number}->days;
+
+	    $schedule = array();
+	    foreach ((array)$schedule_days as $day => $scheduled_events) {
+	        $events = array();
+	        foreach ($scheduled_events as $scheduled_event) {
+	            if ($scheduled_event->entry_type == 'setpoint') {
+        	        $events[(int)$scheduled_event->time] = (object) array(
+        	           'time' => $scheduled_event->time/60, // in minutes
+        	           'target_temperature' => $scheduled_event->type == 'RANGE' ? array((int)$scheduled_event->{'temp-min'}, (int)$scheduled_event->{'temp-max'}) : (int) $scheduled_event->temp,
+        	           'mode' => $scheduled_event->type == 'HEAT' ? TARGET_TEMP_MODE_HEAT : ($scheduled_event->type == 'COOL' ? TARGET_TEMP_MODE_COOL : TARGET_TEMP_MODE_RANGE)
+        	        );
+	            }
+	        }
+	        if (!empty($events)) {
+	            ksort($events);
+    	        $schedule[(int) $day] = array_values($events);
+	        }
+	    }
+	    
+	    ksort($schedule);
+	    $sorted_schedule = array();
+	    foreach ($schedule as $day => $events) {
+	        $sorted_schedule[$this->days_maps[(int) $day]] = $events;
+	    }
+		
+		return $sorted_schedule;
+    }
+    
+    public function getNextScheduledEvent($serial_number=null) {
+        $schedule = $this->getDeviceSchedule($serial_number);
+        $next_event = FALSE;
+        $time = date('H') * 60 + date('i');
+        for ($i = 0, $day = date('D'); $i++ < 7; $day = date('D', strtotime("+ $i days"))) {
+            if (isset($schedule[$day])) {
+                foreach ($schedule[$day] as $event) {
+                    if ($event->time > $time) {
+                        return $event;
+                    }
+                }
+            }
+            $time = 0;
+        }
+        return $next_event;
+    }
+
 	public function getDeviceInfo($serial_number=null) {
 		$this->getStatus();
 	    $serial_number = $this->getDefaultSerial($serial_number);
@@ -101,19 +151,6 @@ class Nest {
 		);
 
 		return $infos;
-	}
-
-	private function getDeviceNetworkInfo($serial_number=null) {
-		$this->getStatus();
-	    $serial_number = $this->getDefaultSerial($serial_number);
-		$connection_info = $this->last_status->track->{$serial_number};
-		return (object) array(
-			'online' => $connection_info->online,
-			'last_connection' => date('Y-m-d H:i:s', $connection_info->last_connection/1000),
-			'wan_ip' => isset($connection_info->last_ip) ? $connection_info->last_ip : NULL,
-			'local_ip' => $this->last_status->device->{$serial_number}->local_ip,
-			'mac_address' => $this->last_status->device->{$serial_number}->mac_address
-		);
 	}
 
 	public function setTargetTemperatureMode($mode, $temperature, $serial_number=null) {
@@ -237,6 +274,19 @@ class Nest {
             $serial_number = $this->getDefaultDevice()->serial_number;
         }
         return $serial_number;
+	}
+
+	private function getDeviceNetworkInfo($serial_number=null) {
+		$this->getStatus();
+	    $serial_number = $this->getDefaultSerial($serial_number);
+		$connection_info = $this->last_status->track->{$serial_number};
+		return (object) array(
+			'online' => $connection_info->online,
+			'last_connection' => date('Y-m-d H:i:s', $connection_info->last_connection/1000),
+			'wan_ip' => $connection_info->last_ip,
+			'local_ip' => $this->last_status->device->{$serial_number}->local_ip,
+			'mac_address' => $this->last_status->device->{$serial_number}->mac_address
+		);
 	}
 
 	private function prepareForGet() {

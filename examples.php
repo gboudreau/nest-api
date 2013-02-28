@@ -70,6 +70,18 @@ $infos = $nest->getDeviceInfo();
 jlog($infos);
 echo "----------\n\n";
 
+echo "Device schedule:\n";
+// Returns as array, one element for each day of the week for which there has at least one scheduled event.
+// Array keys are a textual representation of a day, three letters, as returned by `date('D')`. Array values are arrays of scheduled temperatures, including a time (in minutes after midnight), and a mode (one of the TARGET_TEMP_MODE_* defines).
+$schedule = $nest->getDeviceSchedule();
+jlog($infos);
+echo "----------\n\n";
+
+echo "Device next scheduled event:\n";
+$next_event = $nest->getNextScheduledEvent();
+jlog($next_event);
+echo "----------\n\n";
+
 /* Helper functions */
 
 function json_format($json) { 
