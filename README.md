@@ -1,4 +1,3 @@
-
 Nest Learning Thermostat API
 ============================
 
@@ -89,6 +88,12 @@ Example output for getDeviceInfo():
         "mac_address": "18b430046194"
       }
     }
+
+Troubleshooting
+---------------
+If you have any issues, try adding this at the top of your PHP script, to ask PHP to echo all errors and warnings.
+
+    error_reporting(E_ALL);
 
 Acknowledgements
 ----------------
