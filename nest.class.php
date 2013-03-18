@@ -51,7 +51,7 @@ class Nest {
 				'city' => $structure->location,
 				'postal_code' => $structure->postal_code,
 				'country' => $structure->country_code,
-				'outside_temperature' => isset($weather->now) ? (float) $weather->now->current_temperature : NULL,
+				'outside_temperature' => isset($weather->now) ? $this->temperatureInUserScale((float) $weather->now->current_temperature) : NULL,
 				'away' => $structure->away,
 				'away_last_changed' => date('Y-m-d H:i:s', $structure->away_timestamp),
 				'thermostats' => array_map(array('Nest', 'cleanDevices'), $structure->devices)
@@ -72,7 +72,7 @@ class Nest {
 	            if ($scheduled_event->entry_type == 'setpoint') {
         	        $events[(int)$scheduled_event->time] = (object) array(
         	           'time' => $scheduled_event->time/60, // in minutes
-        	           'target_temperature' => $scheduled_event->type == 'RANGE' ? array((int)$scheduled_event->{'temp-min'}, (int)$scheduled_event->{'temp-max'}) : (int) $scheduled_event->temp,
+        	           'target_temperature' => $scheduled_event->type == 'RANGE' ? array($this->temperatureInUserScale((float)$scheduled_event->{'temp-min'}), $this->temperatureInUserScale((float)$scheduled_event->{'temp-max'})) : $this->temperatureInUserScale((float) $scheduled_event->temp),
         	           'mode' => $scheduled_event->type == 'HEAT' ? TARGET_TEMP_MODE_HEAT : ($scheduled_event->type == 'COOL' ? TARGET_TEMP_MODE_COOL : TARGET_TEMP_MODE_RANGE)
         	        );
 	            }
@@ -119,17 +119,17 @@ class Nest {
 		if ($manual_away || $mode == 'away' || $this->last_status->shared->{$serial_number}->auto_away > 0) {
 			$mode = $mode . ',away';
 			$target_mode = 'range';
-			$target_temperatures = array($this->last_status->device->{$serial_number}->away_temperature_low, $this->last_status->device->{$serial_number}->away_temperature_high);
+			$target_temperatures = array($this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->away_temperature_low), $this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->away_temperature_high));
 		} else if ($mode == 'range') {
 			$target_mode = 'range';
-			$target_temperatures = array($this->last_status->shared->{$serial_number}->target_temperature_low, $this->last_status->shared->{$serial_number}->target_temperature_high);
+			$target_temperatures = array($this->temperatureInUserScale((float) $this->last_status->shared->{$serial_number}->target_temperature_low), $this->temperatureInUserScale((float) $this->last_status->shared->{$serial_number}->target_temperature_high));
 		} else {
-			$target_temperatures = $this->last_status->shared->{$serial_number}->target_temperature;
+			$target_temperatures = $this->temperatureInUserScale((float) $this->last_status->shared->{$serial_number}->target_temperature);
 		}
 		$infos = (object) array(
 			'current_state' => (object) array(
 				'mode' => $mode,
-				'temperature' => $this->last_status->shared->{$serial_number}->current_temperature,
+				'temperature' => $this->temperatureInUserScale((float) $this->last_status->shared->{$serial_number}->current_temperature),
 				'humidity' => $this->last_status->device->{$serial_number}->current_humidity,
 				'ac' => $this->last_status->shared->{$serial_number}->hvac_ac_state,
 				'heat' => $this->last_status->shared->{$serial_number}->hvac_heater_state,
@@ -252,6 +252,15 @@ class Nest {
             return ($temperature - 32) / 1.8;
         }
         return $temperature;
+	}
+
+	public function temperatureInUserScale($temperature_in_celsius, $serial_number=null) {
+	    $serial_number = $this->getDefaultSerial($serial_number);
+	    $temp_scale = $this->getDeviceTemperatureScale($serial_number);
+	    if ($temp_scale == 'F') {
+            return ($temperature_in_celsius * 1.8) + 32;
+        }
+        return $temperature_in_celsius;
 	}
 
 	public function getDeviceTemperatureScale($serial_number=null) {
