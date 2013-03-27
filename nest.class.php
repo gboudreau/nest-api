@@ -425,7 +425,7 @@ class Nest {
         $json = json_decode($response);
 
 		if ($json === NULL && ($method == 'GET' || $url == self::login_url)) {
-			die("Error: Response from request to $url is not valid JSON data. Response: '$response'. cURL error: " . curl_error($ch) . "\n");
+			die("Error: Response from request to $url is not valid JSON data. Response: " . str_replace(array("\n","\r"), '', $response) . "\n");
 		}
 
 	    if ($info['http_code'] == 400) {
