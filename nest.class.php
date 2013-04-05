@@ -429,7 +429,8 @@ class Nest {
         }
 
         if ($info['http_code'] == 400) {
-            die("$json->error: $json->error_description\n");
+	    if(!is_object($json)) die($response);
+            die("HTTP 400 - $json->error: $json->error_description\n");
         }
 
         // No body returned; return a boolean value that confirms a 200 OK was returned.
