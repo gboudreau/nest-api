@@ -224,7 +224,7 @@ class Nest {
 
     public function setHumidity($humidity, $serial_number=null) {
         $serial_number = $this->getDefaultSerial($serial_number);
-        $data = json_encode(array('target_humidity' => $humidity));
+        $data = json_encode(array('target_humidity' => ((double)$humidity)));
         return $this->doPOST("/v2/put/device." . $serial_number, $data);
     }
 
