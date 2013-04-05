@@ -149,6 +149,11 @@ class Nest {
             'location' => $structure,
             'network' => $this->getDeviceNetworkInfo($serial_number)
         );
+        if($this->last_status->device->{$serial_number}->has_humidifier) {
+          $infos->current_state->humidifier= $this->last_status->device->{$serial_number}->humidifier_state;
+          $infos->target->humidity = $this->last_status->device->{$serial_number}->target_humidity;
+          $infos->target->humidity_enabled = $this->last_status->device->{$serial_number}->target_humidity_enabled;
+        }
 
         return $infos;
     }
