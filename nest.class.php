@@ -238,7 +238,7 @@ class Nest {
     public function getStatus() {
         $status = $this->doGET("/v2/mobile/" . $this->user);
         if (!is_object($status)) {
-            die("Couldn't get status from NEST API: $status\n");
+            die("Error: Couldn't get status from NEST API: $status\n");
         }
         $this->last_status = $status;
         $this->saveCache();
@@ -297,7 +297,7 @@ class Nest {
         return (object) array(
             'online' => $connection_info->online,
             'last_connection' => date('Y-m-d H:i:s', $connection_info->last_connection/1000),
-            'wan_ip' => $connection_info->last_ip,
+            'wan_ip' => @$connection_info->last_ip,
             'local_ip' => $this->last_status->device->{$serial_number}->local_ip,
             'mac_address' => $this->last_status->device->{$serial_number}->mac_address
         );
@@ -316,7 +316,7 @@ class Nest {
         }
         $result = $this->doPOST(self::login_url, array('username' => USERNAME, 'password' => PASSWORD));
         if (!isset($result->urls)) {
-            die("Error: response to login request doesn't contain required transport URL. Response: '" . var_export($result, TRUE) . "'\n");
+            die("Error: Response to login request doesn't contain required transport URL. Response: '" . var_export($result, TRUE) . "'\n");
         }
         $this->transport_url = $result->urls->transport_url;
         $this->access_token = $result->access_token;
@@ -413,29 +413,37 @@ class Nest {
         $response = curl_exec($ch);
         $info = curl_getinfo($ch);
         
-        if (($info['http_code'] == 401 || !$response) && $this->use_cache()) {
-            if ($with_retry) {
+        if ($info['http_code'] == 401 || !$response) {
+            if ($with_retry && $this->use_cache()) {
                 // Received 401, and was using cached data; let's try to re-login and retry.
                 @unlink($this->cookie_file);
                 @unlink($this->cache_file);
                 if ($info['http_code'] == 401) {
                     $this->login();
                 }
-                return $this->doRequest($method, $url, $data_fields, FALSE);
+                return $this->doRequest($method, $url, $data_fields, !$with_retry);
             } else {
-                return "Error with request to $url: " . curl_error($ch);
+                return "Error: HTTP request to $url returned an error: " . curl_error($ch);
             }
         }
         
         $json = json_decode($response);
 
-        if ($json === NULL && ($method == 'GET' || $url == self::login_url)) {
+        if (!is_object($json) && ($method == 'GET' || $url == self::login_url)) {
+            if (strpos($response, "currently performing maintenance on your Nest account") !== FALSE) {
+                die("Error: Account is under maintenance; API temporarily unavailable.\n");
+            }
+            if (empty($response)) {
+                die("Error: Received empty response from request to $url.\n");
+            }
             die("Error: Response from request to $url is not valid JSON data. Response: " . str_replace(array("\n","\r"), '', $response) . "\n");
         }
 
         if ($info['http_code'] == 400) {
-	    if(!is_object($json)) die($response);
-            die("HTTP 400 - $json->error: $json->error_description\n");
+            if (!is_object($json)) {
+                die("Error: HTTP 400 from request to $url. Response: " . str_replace(array("\n","\r"), '', $response) . "\n");
+            }
+            die("Error: HTTP 400 from request to $url. JSON error: $json->error - $json->error_description\n");
         }
 
         // No body returned; return a boolean value that confirms a 200 OK was returned.
