@@ -386,13 +386,14 @@ class Nest {
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
         curl_setopt($ch, CURLOPT_AUTOREFERER, TRUE);
         curl_setopt($ch, CURLOPT_USERAGENT, self::user_agent); 
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers); 
         curl_setopt($ch, CURLOPT_COOKIEJAR, $this->cookie_file);
         curl_setopt($ch, CURLOPT_COOKIEFILE, $this->cookie_file);
         if ($method == 'POST') {
             curl_setopt($ch, CURLOPT_POST, TRUE);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+            $headers[] = 'Content-length: ' . strlen($data);
         }
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
         if (DEBUG) {
             curl_setopt($ch, CURLOPT_PROXY, '127.0.0.1:8888');
             curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
