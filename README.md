@@ -20,7 +20,9 @@ Features
 - Setters:
     - Target temperatures (single, or range)
     - Target temperature mode: cool, heat, range
-    - Fan mode: auto, on
+    - Fan mode: auto, on, minutes per hour
+    - Fan: every day schedule (start & stop time)
+    - Fan: on with timer (stops after X minutes/hours)
     - Away mode: on, off
     - Turn off HVAC
 

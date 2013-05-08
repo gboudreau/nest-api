@@ -7,6 +7,20 @@ define('TARGET_TEMP_MODE_HEAT', 'heat');
 define('TARGET_TEMP_MODE_RANGE', 'range');
 define('FAN_MODE_AUTO', 'auto');
 define('FAN_MODE_ON', 'on');
+define('FAN_MODE_EVERY_DAY_ON', 'on');
+define('FAN_MODE_EVERY_DAY_OFF', 'auto');
+define('FAN_MODE_MINUTES_PER_HOUR_15', 'duty-cycle,900');
+define('FAN_MODE_MINUTES_PER_HOUR_30', 'duty-cycle,1800');
+define('FAN_MODE_MINUTES_PER_HOUR_45', 'duty-cycle,2700');
+define('FAN_MODE_MINUTES_PER_HOUR_ALWAYS_ON', 'on,3600');
+define('FAN_TIMER_15M', ',900');
+define('FAN_TIMER_30M', ',1800');
+define('FAN_TIMER_45M', ',2700');
+define('FAN_TIMER_1H', ',3600');
+define('FAN_TIMER_2H', ',7200');
+define('FAN_TIMER_4H', ',14400');
+define('FAN_TIMER_8H', ',28800');
+define('FAN_TIMER_12H', ',43200');
 define('AWAY_MODE_ON', TRUE);
 define('AWAY_MODE_OFF', FALSE);
 define('DUALFUEL_BREAKPOINT_ALWAYS_PRIMARY', 'always-primary');
@@ -200,8 +214,32 @@ class Nest {
     }
 
     public function setFanMode($mode, $serial_number=null) {
+        return $this->_setFanMode($mode, null, null, $serial_number);
+    }
+
+    public function setFanModeMinutesPerHour($mode, $serial_number=null) {
+        $modes = explode(',', $mode);
+        $mode = $modes[0];
+        $duty_cycle = $modes[1];
+        return $this->_setFanMode($mode, $duty_cycle, null, $serial_number);
+    }
+
+    public function setFanModeOnWithTimer($mode, $serial_number=null) {
+        $modes = explode(',', $mode);
+        $mode = $modes[0];
+        $timer = (int) $modes[1];
+        return $this->_setFanMode($mode, null, $timer, $serial_number);
+    }
+
+    public function cancelFanModeOnWithTimer($serial_number=null) {
         $serial_number = $this->getDefaultSerial($serial_number);
-        $data = json_encode(array('fan_mode' => $mode));
+        $data = json_encode(array('fan_timer_timeout' => 0));
+        return $this->doPOST("/v2/put/device." . $serial_number, $data);
+    }
+
+    public function setFanEveryDaySchedule($start_hour, $end_hour, $serial_number=null) {
+        $serial_number = $this->getDefaultSerial($serial_number);
+        $data = json_encode(array('fan_duty_start_time' => $start_hour*3600, 'fan_duty_end_time' => $end_hour*3600));
         return $this->doPOST("/v2/put/device." . $serial_number, $data);
     }
 
@@ -301,6 +339,22 @@ class Nest {
             'local_ip' => $this->last_status->device->{$serial_number}->local_ip,
             'mac_address' => $this->last_status->device->{$serial_number}->mac_address
         );
+    }
+
+    private function _setFanMode($mode, $fan_duty_cycle=null, $timer=null, $serial_number=null) {
+        $serial_number = $this->getDefaultSerial($serial_number);
+        $data = array();
+        if (!empty($mode)) {
+            $data['fan_mode'] = $mode;
+        }
+        if (!empty($fan_duty_cycle)) {
+            $data['fan_duty_cycle'] = (int) $fan_duty_cycle;
+        }
+        if (!empty($timer)) {
+            $data['fan_timer_duration'] = $timer;
+            $data['fan_timer_timeout'] = time() + $timer;
+        }
+        return $this->doPOST("/v2/put/device." . $serial_number, json_encode($data));
     }
 
     private function prepareForGet() {
@@ -414,7 +468,7 @@ class Nest {
         $response = curl_exec($ch);
         $info = curl_getinfo($ch);
         
-        if ($info['http_code'] == 401 || (!$response && stripos($url, '/v2/put/structure') === FALSE)) {
+        if ($info['http_code'] == 401 || (!$response && curl_errno($ch) != 0)) {
             if ($with_retry && $this->use_cache()) {
                 // Received 401, and was using cached data; let's try to re-login and retry.
                 @unlink($this->cookie_file);

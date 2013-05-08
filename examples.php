@@ -49,6 +49,22 @@ echo "Setting fan mode...\n";
 $success = $nest->setFanMode(FAN_MODE_ON); // Available: FAN_MODE_AUTO, FAN_MODE_ON
 var_dump($success);
 
+echo "Setting fan mode: on with timer (15 minutes)...\n";
+$success = $nest->setFanModeOnWithTimer(FAN_TIMER_15M); // Available: FAN_TIMER_15M, FAN_TIMER_30M, FAN_TIMER_45M, FAN_TIMER_1H, FAN_TIMER_2H, FAN_TIMER_4H, FAN_TIMER_8H, FAN_TIMER_12H
+var_dump($success);
+
+echo "Canceling timer that was just set...\n";
+$success = $nest->cancelFanModeOnWithTimer();
+var_dump($success);
+
+echo "Setting fan mode to 30 minutes per hour...\n";
+$success = $nest->setFanModeMinutesPerHour(FAN_MODE_MINUTES_PER_HOUR_30); // Available: FAN_MODE_MINUTES_PER_HOUR_15, FAN_MODE_MINUTES_PER_HOUR_30, FAN_MODE_MINUTES_PER_HOUR_45, FAN_MODE_MINUTES_PER_HOUR_ALWAYS_ON
+var_dump($success);
+
+echo "Setting fan mode to run every day, but only between 5am and 10pm...\n";
+$success = $nest->setFanEveryDaySchedule(5, 22); // Send 0,0 to run all day long
+var_dump($success);
+
 echo "Turning system off...\n";
 $success = $nest->turnOff();
 var_dump($success);
