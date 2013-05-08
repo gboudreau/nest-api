@@ -414,7 +414,7 @@ class Nest {
         $response = curl_exec($ch);
         $info = curl_getinfo($ch);
         
-        if ($info['http_code'] == 401 || !$response) {
+        if ($info['http_code'] == 401 || (!$response && stripos($url, '/v2/put/structure') === FALSE)) {
             if ($with_retry && $this->use_cache()) {
                 // Received 401, and was using cached data; let's try to re-login and retry.
                 @unlink($this->cookie_file);
