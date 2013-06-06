@@ -40,6 +40,7 @@ class Nest {
     private $cache_file;
     private $cache_expiration;
     private $last_status;
+    private $sessionID = null;
     
     function __construct() {
         $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies';
@@ -49,6 +50,7 @@ class Nest {
         }
         // Log in, if needed
         $this->login();
+        $this->sessionID = (time() * 1000) . '' . rand() * 100000000;
     }
     
     /* Getters and setters */
@@ -170,6 +172,30 @@ class Nest {
         }
 
         return $infos;
+    }
+  
+    public function getEnergyLatest($serial_number=null) {
+        $serial_number = $this->getDefaultSerial($serial_number);
+    
+      $payload = array(
+        'keys' => array(
+          array('key' => 'energy_latest' . '.' . $serial_number) //energy_latest.01AA02AB2012002C
+        )
+      );
+
+      $data = array(
+        'payload=' . urlencode(json_encode($payload)),
+        'X-nl-subscribe-timeout=8',
+        '_method=POST',
+        'X-nl-client-timestamp=' . (time() * 1000),
+        'X-nl-session-id=' . $this->sessionID,
+        'X-nl-protocol-version=1',
+        'Authorization=Basic+' . $this->access_token
+      );
+    
+      $url = '/v2/subscribe?' . (implode('&', $data));
+    
+      return $this->doGET($url);
     }
 
     public function setTargetTemperatureMode($mode, $temperature, $serial_number=null) {
