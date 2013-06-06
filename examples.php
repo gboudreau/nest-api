@@ -98,6 +98,11 @@ $next_event = $nest->getNextScheduledEvent();
 jlog($next_event);
 echo "----------\n\n";
 
+echo "Last 10 days energy report:\n";
+$energy_report = $nest->getEnergyLatest();
+jlog($energy_report);
+echo "----------\n\n";
+
 /* Helper functions */
 
 function json_format($json) { 

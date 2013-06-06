@@ -17,6 +17,7 @@ Features
     - Network information (local & WAN IPs, MAC address, online status)
     - Currently active schedule (by day)
     - Next scheduled event
+    - Last 10 days energy report
 - Setters:
     - Target temperatures (single, or range)
     - Target temperature mode: cool, heat, range
