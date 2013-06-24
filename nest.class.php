@@ -233,7 +233,19 @@ class Nest {
     }
 
     public function setFanMode($mode, $serial_number=null) {
-        return $this->_setFanMode($mode, null, null, $serial_number);
+        $modes = explode(',', $mode);
+
+        $mode = $modes[0];
+        $duty_cycle = null;
+        $timer = null;
+
+        if($modes[0] == 'duty-cycle') {
+            $duty_cycle = $modes[1];
+        } else if(isset($modes[1])) {
+            $timer = $modes[1];
+        }
+
+        return $this->_setFanMode($mode, $duty_cycle, $timer, $serial_number);
     }
 
     public function setFanModeMinutesPerHour($mode, $serial_number=null) {
@@ -373,6 +385,7 @@ class Nest {
             $data['fan_timer_duration'] = $timer;
             $data['fan_timer_timeout'] = time() + $timer;
         }
+        pr($data);
         return $this->doPOST("/v2/put/device." . $serial_number, json_encode($data));
     }
 
