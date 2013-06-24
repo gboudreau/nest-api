@@ -31,7 +31,7 @@ class Nest {
     const protocol_version = 1;
     const login_url = 'https://home.nest.com/user/login';
     private $days_maps = array('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun');
-    
+
     private $transport_url;
     private $access_token;
     private $user;
@@ -40,17 +40,17 @@ class Nest {
     private $cache_file;
     private $cache_expiration;
     private $last_status;
-    
+
     function __construct() {
-        $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies';
-        $this->cache_file = sys_get_temp_dir() . '/nest_php_cache';
-        if (file_exists($this->cache_file)) {
+        $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . md5(USERNAME . PASSWORD);
+        $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . md5(USERNAME . PASSWORD);
+        if ($this->use_cache()) {
             $this->loadCache();
         }
         // Log in, if needed
         $this->login();
     }
-    
+
     /* Getters and setters */
 
     public function getUserLocations() {
@@ -96,16 +96,16 @@ class Nest {
                 $schedule[(int) $day] = array_values($events);
             }
         }
-        
+
         ksort($schedule);
         $sorted_schedule = array();
         foreach ($schedule as $day => $events) {
             $sorted_schedule[$this->days_maps[(int) $day]] = $events;
         }
-        
+
         return $sorted_schedule;
     }
-    
+
     public function getNextScheduledEvent($serial_number=null) {
         $schedule = $this->getDeviceSchedule($serial_number);
         $next_event = FALSE;
@@ -171,7 +171,7 @@ class Nest {
 
         return $infos;
     }
-  
+
     public function getEnergyLatest($serial_number=null) {
         $serial_number = $this->getDefaultSerial($serial_number);
 
@@ -185,9 +185,9 @@ class Nest {
             'payload=' . urlencode(json_encode($payload)),
             '_method=POST',
         );
-    
+
         $url = '/v2/subscribe?' . (implode('&', $data));
-    
+
         return $this->doGET($url);
     }
 
@@ -203,7 +203,7 @@ class Nest {
             $temp_high = $this->temperatureInCelsius($temperature[1], $serial_number);
             $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature_low' => $temp_low, 'target_temperature_high' => $temp_high));
             $set_temp_result = $this->doPOST("/v2/put/shared." . $serial_number, $data);
-        } else {
+        } else if($mode != 'off') {
             if (!is_numeric($temperature)) {
                 echo "Error: when using TARGET_TEMP_MODE_HEAT or TARGET_TEMP_MODE_COLD, you need to set the target temperature (second argument of setTargetTemperatureMode) using an numeric value.\n";
                 return FALSE;
@@ -223,7 +223,7 @@ class Nest {
         $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature' => $temperature));
         return $this->doPOST("/v2/put/shared." . $serial_number, $data);
     }
-    
+
     public function setTargetTemperatures($temp_low, $temp_high, $serial_number=null) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $temp_low = $this->temperatureInCelsius($temp_low, $serial_number);
@@ -233,7 +233,19 @@ class Nest {
     }
 
     public function setFanMode($mode, $serial_number=null) {
-        return $this->_setFanMode($mode, null, null, $serial_number);
+        $modes = explode(',', $mode);
+
+        $mode = $modes[0];
+        $duty_cycle = null;
+        $timer = null;
+
+        if($modes[0] == 'duty-cycle') {
+            $duty_cycle = $modes[1];
+        } else if(isset($modes[1])) {
+            $timer = $modes[1];
+        }
+
+        return $this->_setFanMode($mode, $duty_cycle, $timer, $serial_number);
     }
 
     public function setFanModeMinutesPerHour($mode, $serial_number=null) {
@@ -272,7 +284,7 @@ class Nest {
         $structure_id = $this->getDeviceInfo($serial_number)->location;
         return $this->doPOST("/v2/put/structure." . $structure_id, $data);
     }
-    
+
     public function setDualFuelBreakpoint($breakpoint, $serial_number=null) {
         $serial_number = $this->getDefaultSerial($serial_number);
         if (!is_string($breakpoint)) {
@@ -373,6 +385,7 @@ class Nest {
             $data['fan_timer_duration'] = $timer;
             $data['fan_timer_timeout'] = time() + $timer;
         }
+
         return $this->doPOST("/v2/put/device." . $serial_number, json_encode($data));
     }
 
@@ -402,7 +415,7 @@ class Nest {
     private function use_cache() {
         return file_exists($this->cookie_file) && file_exists($this->cache_file) && !empty($this->cache_expiration) && $this->cache_expiration > time();
     }
-    
+
     private function loadCache() {
         $vars = unserialize(file_get_contents($this->cache_file));
         $this->transport_url = $vars['transport_url'];
@@ -412,7 +425,7 @@ class Nest {
         $this->cache_expiration = $vars['cache_expiration'];
         $this->last_status = $vars['last_status'];
     }
-    
+
     private function saveCache() {
         $vars = array(
             'transport_url' => $this->transport_url,
@@ -428,7 +441,7 @@ class Nest {
     private function doGET($url) {
         return $this->doRequest('GET', $url);
     }
-    
+
     private function doPOST($url, $data_fields) {
         return $this->doRequest('POST', $url, $data_fields);
     }
@@ -458,7 +471,7 @@ class Nest {
         curl_setopt($ch, CURLOPT_HEADER, FALSE);
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
         curl_setopt($ch, CURLOPT_AUTOREFERER, TRUE);
-        curl_setopt($ch, CURLOPT_USERAGENT, self::user_agent); 
+        curl_setopt($ch, CURLOPT_USERAGENT, self::user_agent);
         curl_setopt($ch, CURLOPT_COOKIEJAR, $this->cookie_file);
         curl_setopt($ch, CURLOPT_COOKIEFILE, $this->cookie_file);
         if ($method == 'POST') {
@@ -486,7 +499,7 @@ class Nest {
         }
         $response = curl_exec($ch);
         $info = curl_getinfo($ch);
-        
+
         if ($info['http_code'] == 401 || (!$response && curl_errno($ch) != 0)) {
             if ($with_retry && $this->use_cache()) {
                 // Received 401, and was using cached data; let's try to re-login and retry.
@@ -500,7 +513,7 @@ class Nest {
                 return "Error: HTTP request to $url returned an error: " . curl_error($ch);
             }
         }
-        
+
         $json = json_decode($response);
 
         if (!is_object($json) && ($method == 'GET' || $url == self::login_url)) {
