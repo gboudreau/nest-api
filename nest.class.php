@@ -385,7 +385,7 @@ class Nest {
             $data['fan_timer_duration'] = $timer;
             $data['fan_timer_timeout'] = time() + $timer;
         }
-        pr($data);
+
         return $this->doPOST("/v2/put/device." . $serial_number, json_encode($data));
     }
 
