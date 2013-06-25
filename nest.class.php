@@ -5,6 +5,7 @@ define('DEBUG', FALSE);
 define('TARGET_TEMP_MODE_COOL', 'cool');
 define('TARGET_TEMP_MODE_HEAT', 'heat');
 define('TARGET_TEMP_MODE_RANGE', 'range');
+define('TARGET_TEMP_MODE_OFF', 'off');
 define('FAN_MODE_AUTO', 'auto');
 define('FAN_MODE_ON', 'on');
 define('FAN_MODE_EVERY_DAY_ON', 'on');
@@ -203,7 +204,8 @@ class Nest {
             $temp_high = $this->temperatureInCelsius($temperature[1], $serial_number);
             $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature_low' => $temp_low, 'target_temperature_high' => $temp_high));
             $set_temp_result = $this->doPOST("/v2/put/shared." . $serial_number, $data);
-        } else {
+        } else if ($mode != TARGET_TEMP_MODE_OFF) {
+            // heat or cool
             if (!is_numeric($temperature)) {
                 echo "Error: when using TARGET_TEMP_MODE_HEAT or TARGET_TEMP_MODE_COLD, you need to set the target temperature (second argument of setTargetTemperatureMode) using an numeric value.\n";
                 return FALSE;
@@ -263,7 +265,7 @@ class Nest {
     }
 
     public function turnOff($serial_number=null) {
-        return $this->setTargetTemperatureMode('off', $serial_number);
+        return $this->setTargetTemperatureMode(TARGET_TEMP_MODE_OFF, $serial_number);
     }
 
     public function setAway($away, $serial_number=null) {
