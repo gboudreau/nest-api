@@ -42,9 +42,9 @@ class Nest {
     private $last_status;
     
     function __construct() {
-        $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies';
-        $this->cache_file = sys_get_temp_dir() . '/nest_php_cache';
-        if (file_exists($this->cache_file)) {
+        $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . md5(USERNAME . PASSWORD);
+        $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . md5(USERNAME . PASSWORD);
+        if ($this->use_cache()) {
             $this->loadCache();
         }
         // Log in, if needed
