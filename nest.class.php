@@ -10,10 +10,12 @@ define('FAN_MODE_AUTO', 'auto');
 define('FAN_MODE_ON', 'on');
 define('FAN_MODE_EVERY_DAY_ON', 'on');
 define('FAN_MODE_EVERY_DAY_OFF', 'auto');
-define('FAN_MODE_MINUTES_PER_HOUR_15', 'duty-cycle,900');
-define('FAN_MODE_MINUTES_PER_HOUR_30', 'duty-cycle,1800');
-define('FAN_MODE_MINUTES_PER_HOUR_45', 'duty-cycle,2700');
+define('FAN_MODE_MINUTES_PER_HOUR', 'duty-cycle');
+define('FAN_MODE_MINUTES_PER_HOUR_15', FAN_MODE_MINUTES_PER_HOUR . ',900');
+define('FAN_MODE_MINUTES_PER_HOUR_30', FAN_MODE_MINUTES_PER_HOUR . ',1800');
+define('FAN_MODE_MINUTES_PER_HOUR_45', FAN_MODE_MINUTES_PER_HOUR . ',2700');
 define('FAN_MODE_MINUTES_PER_HOUR_ALWAYS_ON', 'on,3600');
+define('FAN_MODE_TIMER', '');
 define('FAN_TIMER_15M', ',900');
 define('FAN_TIMER_30M', ',1800');
 define('FAN_TIMER_45M', ',2700');
@@ -235,7 +237,24 @@ class Nest {
     }
 
     public function setFanMode($mode, $serial_number=null) {
-        return $this->_setFanMode($mode, null, null, $serial_number);
+        $duty_cycle = null;
+        $timer = null;
+        if (is_array($mode)) {
+            $modes = $mode;
+            $mode = $modes[0];
+            if (count($modes) > 1) {
+                if ($mode == FAN_MODE_MINUTES_PER_HOUR) {
+                    $duty_cycle = (int) $modes[1];
+                } else {
+                    $timer = (int) $modes[1];
+                }
+            } else {
+                throw new Exception("setFanMode(array \$mode[, ...]) needs at least a mode and a value in the \$mode array.");
+            }
+        } else if (!is_string($mode)) {
+            throw new Exception("setFanMode() can only take a string or an array as it's first parameter.");
+        }
+        return $this->_setFanMode($mode, $duty_cycle, $timer, $serial_number);
     }
 
     public function setFanModeMinutesPerHour($mode, $serial_number=null) {
