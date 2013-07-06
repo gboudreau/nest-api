@@ -28,6 +28,7 @@ define('AWAY_MODE_ON', TRUE);
 define('AWAY_MODE_OFF', FALSE);
 define('DUALFUEL_BREAKPOINT_ALWAYS_PRIMARY', 'always-primary');
 define('DUALFUEL_BREAKPOINT_ALWAYS_ALT', 'always-alt');
+define('DEVICE_WITH_NO_NAME', 'Not Set');
 
 class Nest {
     const user_agent = 'Nest/2.1.3 CFNetwork/548.0.4';
@@ -358,6 +359,23 @@ class Nest {
         $device = $this->last_status->structure->{$structure_id}->devices[0];
         list(, $device_serial) = explode('.', $device);
         return $this->last_status->device->{$device_serial};
+    }
+
+    public function getDeviceFriendlyName($serial_number=NULL) {
+        $this->getStatus();
+        $name = !empty($this->last_status->shared->{$serial_number}->name) ? $this->last_status->shared->{$serial_number}->name : DEVICE_WITH_NO_NAME;
+        return $name;
+    }
+    
+    public function getDevices() {
+        $this->prepareForGet();
+        $structure = $this->last_status->user->{$this->userid}->structures[0];
+        list(, $structure_id) = explode('.', $structure);
+        foreach ($this->last_status->structure->{$structure_id}->devices as $device) {
+            $serial = explode('.', $device);
+            $devices_serial[] = $serial[1];
+        }
+        return $devices_serial;
     }
 
     private function getDefaultSerial($serial_number) {
