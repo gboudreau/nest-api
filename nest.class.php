@@ -352,7 +352,7 @@ class Nest {
     }
 
     public function getDefaultDevice() {
-        $this->prepareForGet();
+        $this->getStatus();
         $structure = $this->last_status->user->{$this->userid}->structures[0];
         list(, $structure_id) = explode('.', $structure);
         $device = $this->last_status->structure->{$structure_id}->devices[0];
