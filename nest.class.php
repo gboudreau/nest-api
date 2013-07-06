@@ -362,7 +362,7 @@ class Nest {
     }
 
     public function getDeviceFriendlyName($serial_number=NULL) {
-        $this->getStatus();
+        $serial_number = $this->getDefaultSerial($serial_number);
         $name = !empty($this->last_status->shared->{$serial_number}->name) ? $this->last_status->shared->{$serial_number}->name : DEVICE_WITH_NO_NAME;
         return $name;
     }
