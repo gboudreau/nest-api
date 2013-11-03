@@ -185,6 +185,7 @@ class Nest {
         );
 
         $data = array(
+            'jsonp=jsonp',
             'payload=' . urlencode(json_encode($payload)),
             '_method=POST',
         );
@@ -522,6 +523,9 @@ class Nest {
             }
         }
         
+        if (strpos($response, 'jsonp(') === 0) {
+            $response = substr($response, 6, strlen($response)-7);
+        }
         $json = json_decode($response);
 
         if (!is_object($json) && ($method == 'GET' || $url == self::login_url)) {
