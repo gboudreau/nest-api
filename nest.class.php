@@ -306,6 +306,12 @@ class Nest {
         return $this->doPOST("/v2/put/device." . $serial_number, $data);
     }
 
+    public function enableHumidifier($enabled, $serial_number=null) {
+        $serial_number = $this->getDefaultSerial($serial_number);
+        $data = json_encode(array('target_humidity_enabled' => ((boolean)$enabled)));
+        return $this->doPOST("/v2/put/device." . $serial_number, $data);
+    }
+
     public function setHumidity($humidity, $serial_number=null) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $data = json_encode(array('target_humidity' => ((double)$humidity)));
