@@ -29,6 +29,12 @@ define('AWAY_MODE_OFF', FALSE);
 define('DUALFUEL_BREAKPOINT_ALWAYS_PRIMARY', 'always-primary');
 define('DUALFUEL_BREAKPOINT_ALWAYS_ALT', 'always-alt');
 
+define('NESTAPI_ERROR_UNDER_MAINTENANCE', 1000);
+define('NESTAPI_ERROR_EMPTY_RESPONSE', 1001);
+define('NESTAPI_ERROR_NOT_JSON_RESPONSE', 1002);
+define('NESTAPI_ERROR_API_JSON_ERROR', 1003);
+define('NESTAPI_ERROR_API_OTHER_ERROR', 1004);
+
 class Nest {
     const user_agent = 'Nest/2.1.3 CFNetwork/548.0.4';
     const protocol_version = 1;
@@ -61,7 +67,14 @@ class Nest {
         $structures = (array) $this->last_status->structure;
         $user_structures = array();
         foreach ($structures as $structure) {
-            $weather = $this->doGET("https://home.nest.com/api/0.1/weather/forecast/" . $structure->postal_code);
+            try {
+                $weather = $this->doGET("https://home.nest.com/api/0.1/weather/forecast/" . $structure->postal_code);
+            } catch (RuntimeException $ex) {
+                // NESTAPI_ERROR_NOT_JSON_RESPONSE is kinda normal. The forecast API will often return a '502 Bad Gateway' response... meh.
+                if ($ex->getCode() != NESTAPI_ERROR_NOT_JSON_RESPONSE) {
+                    throw new RuntimeException("Unexpected issue fetching forecast.", $ex->getCode(), $ex);
+                }
+            }
             $user_structures[] = (object) array(
                 'name' => $structure->name,
                 'address' => !empty($structure->street_address) ? $structure->street_address : NULL,
@@ -525,30 +538,26 @@ class Nest {
                 }
                 return $this->doRequest($method, $url, $data_fields, !$with_retry);
             } else {
-                return "Error: HTTP request to $url returned an error: " . curl_error($ch);
+                throw new RuntimeException("Error: HTTP request to $url returned an error: " . curl_error($ch), curl_errno($ch));
             }
         }
         
-        if (strpos($response, 'jsonp(') === 0) {
-            $response = substr($response, 6, strlen($response)-7);
-        }
         $json = json_decode($response);
-
         if (!is_object($json) && ($method == 'GET' || $url == self::login_url)) {
             if (strpos($response, "currently performing maintenance on your Nest account") !== FALSE) {
-                die("Error: Account is under maintenance; API temporarily unavailable.\n");
+                throw new RuntimeException("Error: Account is under maintenance; API temporarily unavailable.", NESTAPI_ERROR_UNDER_MAINTENANCE);
             }
             if (empty($response)) {
-                die("Error: Received empty response from request to $url.\n");
+                throw new RuntimeException("Error: Received empty response from request to $url.", NESTAPI_ERROR_EMPTY_RESPONSE);
             }
-            die("Error: Response from request to $url is not valid JSON data. Response: " . str_replace(array("\n","\r"), '', $response) . "\n");
+            throw new RuntimeException("Error: Response from request to $url is not valid JSON data. Response: " . str_replace(array("\n","\r"), '', $response), NESTAPI_ERROR_NOT_JSON_RESPONSE);
         }
 
         if ($info['http_code'] == 400) {
             if (!is_object($json)) {
-                die("Error: HTTP 400 from request to $url. Response: " . str_replace(array("\n","\r"), '', $response) . "\n");
+                throw new RuntimeException("Error: HTTP 400 from request to $url. Response: " . str_replace(array("\n","\r"), '', $response), NESTAPI_ERROR_API_OTHER_ERROR);
             }
-            die("Error: HTTP 400 from request to $url. JSON error: $json->error - $json->error_description\n");
+            throw new RuntimeException("Error: HTTP 400 from request to $url. JSON error: $json->error - $json->error_description", NESTAPI_ERROR_API_JSON_ERROR);
         }
 
         // No body returned; return a boolean value that confirms a 200 OK was returned.
