@@ -24,7 +24,7 @@ Features
     - Fan mode: auto, on, minutes per hour
     - Fan: every day schedule (start & stop time)
     - Fan: on with timer (stops after X minutes/hours)
-    - Away mode: on, off
+    - Away mode: on, off, min/max temperatures
     - Dual fuel: breakpoint (use alt. fuel when outdoor temp is below X), always alt, always primary
     - Humidity (on, off, %)
     - Turn off HVAC

@@ -198,7 +198,6 @@ class Nest {
         );
 
         $data = array(
-            'jsonp=jsonp',
             'payload=' . urlencode(json_encode($payload)),
             '_method=POST',
         );
@@ -248,6 +247,27 @@ class Nest {
         $temp_high = $this->temperatureInCelsius($temp_high, $serial_number);
         $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature_low' => $temp_low, 'target_temperature_high' => $temp_high));
         return $this->doPOST("/v2/put/shared." . $serial_number, $data);
+    }
+
+    public function setAwayTemperatures($temp_low, $temp_high, $serial_number=null) {
+        $serial_number = $this->getDefaultSerial($serial_number);
+        $temp_low = $this->temperatureInCelsius($temp_low, $serial_number);
+        $temp_high = $this->temperatureInCelsius($temp_high, $serial_number);
+        $data = array();
+        if ($temp_low === FALSE || $temp_low < 4) {
+            $data['away_temperature_low_enabled'] = FALSE;
+        } else if ($temp_low != NULL) {
+            $data['away_temperature_low_enabled'] = TRUE;
+            $data['away_temperature_low'] = $temp_low;
+        }
+        if ($temp_high === FALSE || $temp_high > 32) {
+            $data['away_temperature_high_enabled'] = FALSE;
+        } else if ($temp_high != NULL) {
+            $data['away_temperature_high_enabled'] = TRUE;
+            $data['away_temperature_high'] = $temp_high;
+        }
+        $data = json_encode($data);
+        return $this->doPOST("/v2/put/device." . $serial_number, $data);
     }
 
     public function setFanMode($mode, $serial_number=null) {
