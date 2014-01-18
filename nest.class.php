@@ -192,19 +192,14 @@ class Nest {
         $serial_number = $this->getDefaultSerial($serial_number);
 
         $payload = array(
-            'keys' => array(
-                array('key' => "energy_latest.$serial_number")
+            'objects' => array(
+                array('object_key' => "energy_latest.$serial_number")
             )
         );
 
-        $data = array(
-            'payload=' . urlencode(json_encode($payload)),
-            '_method=POST',
-        );
+        $url = '/v5/subscribe';
     
-        $url = '/v2/subscribe?' . (implode('&', $data));
-    
-        return $this->doGET($url);
+        return $this->doPOST($url, json_encode($payload));
     }
 
     public function setTargetTemperatureMode($mode, $temperature, $serial_number=null) {
