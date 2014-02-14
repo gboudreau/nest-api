@@ -76,6 +76,10 @@ echo "Setting away mode...\n";
 $success = $nest->setAway(AWAY_MODE_ON); // Available: AWAY_MODE_ON, AWAY_MODE_OFF
 var_dump($success);
 
+echo "Enabling (Nest Sense) Auto-Away...\n";
+$success = $nest->setAutoAwayEnabled(true);
+var_dump($success);
+
 echo "Setting dual-fuel breakpoint (use alternative heat when the outdoor temperature is below -5°)...\n";
 // Note: when using temperatures, it will use the units you set on the device. I'm using celsius on my device, so I'm using celsius here.
 $success = $nest->setDualFuelBreakpoint(-5); // Available: DUALFUEL_BREAKPOINT_ALWAYS_PRIMARY, DUALFUEL_BREAKPOINT_ALWAYS_ALT, or a temperature between -12°C and 9°C (10-50°F)

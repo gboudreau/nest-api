@@ -323,6 +323,12 @@ class Nest {
         return $this->doPOST("/v2/put/structure." . $structure_id, $data);
     }
     
+    public function setAutoAwayEnabled($enabled, $serial_number=null) {
+        $serial_number = $this->getDefaultSerial($serial_number);
+        $data = json_encode(array('auto_away_enable' => $enabled));
+        return $this->doPOST("/v2/put/device." . $serial_number, $data);
+    }
+
     public function setDualFuelBreakpoint($breakpoint, $serial_number=null) {
         $serial_number = $this->getDefaultSerial($serial_number);
         if (!is_string($breakpoint)) {
