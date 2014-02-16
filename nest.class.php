@@ -178,7 +178,8 @@ class Nest {
             'serial_number' => $this->last_status->device->{$serial_number}->serial_number,
             'scale' => $this->last_status->device->{$serial_number}->temperature_scale,
             'location' => $structure,
-            'network' => $this->getDeviceNetworkInfo($serial_number)
+            'network' => $this->getDeviceNetworkInfo($serial_number),
+            'name' => !empty($this->last_status->shared->{$serial_number}->name) ? $this->last_status->shared->{$serial_number}->name : DEVICE_WITH_NO_NAME
         );
         if($this->last_status->device->{$serial_number}->has_humidifier) {
           $infos->current_state->humidifier= $this->last_status->device->{$serial_number}->humidifier_state;
@@ -393,38 +394,29 @@ class Nest {
         return $this->last_status->device->{$serial_number}->temperature_scale;
     }
 
-    public function getDefaultDevice() {
-        $this->prepareForGet();
-        $structure = $this->last_status->user->{$this->userid}->structures[0];
-        list(, $structure_id) = explode('.', $structure);
-        $device = $this->last_status->structure->{$structure_id}->devices[0];
-        list(, $device_serial) = explode('.', $device);
-        return $this->last_status->device->{$device_serial};
-    }
-
-    public function getDeviceFriendlyName($serial_number=NULL) {
-        $serial_number = $this->getDefaultSerial($serial_number);
-        $name = !empty($this->last_status->shared->{$serial_number}->name) ? $this->last_status->shared->{$serial_number}->name : DEVICE_WITH_NO_NAME;
-        return $name;
-    }
-    
     public function getDevices() {
         $this->prepareForGet();
         $structure = $this->last_status->user->{$this->userid}->structures[0];
         list(, $structure_id) = explode('.', $structure);
+        $devices_serials = array();
         foreach ($this->last_status->structure->{$structure_id}->devices as $device) {
-            $serial = explode('.', $device);
-            $devices_serial[] = $serial[1];
+            list(, $device_serial) = explode('.', $device);
+            $devices_serials[] = $device_serial;
         }
-        return $devices_serial;
+        return $devices_serials;
     }
 
     private function getDefaultSerial($serial_number) {
-        $this->prepareForGet();
         if (empty($serial_number)) {
-            $serial_number = $this->getDefaultDevice()->serial_number;
+            $devices_serials = $this->getDevices();
+            $serial_number = $devices_serials[0];
         }
         return $serial_number;
+    }
+
+    public function getDefaultDevice() {
+        $serial_number = $this->getDefaultSerial();
+        return $this->last_status->device->{$serial_number};
     }
 
     private function getDeviceNetworkInfo($serial_number=null) {

@@ -19,6 +19,11 @@ $locations = $nest->getUserLocations();
 jlog($locations);
 echo "----------\n\n";
 
+echo "Devices list:\n";
+$devices_serials = $nest->getDevices();
+jlog($devices_serials);
+echo "----------\n\n";
+
 echo "Device information:\n";
 $infos = $nest->getDeviceInfo();
 jlog($infos);

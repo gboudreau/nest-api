@@ -18,6 +18,7 @@ Features
     - Currently active schedule (by day)
     - Next scheduled event
     - Last 10 days energy report
+    - Device name, devices list
 - Setters:
     - Target temperatures (single, or range)
     - Target temperature mode: cool, heat, range
