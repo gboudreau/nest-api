@@ -166,7 +166,7 @@ class Nest {
                 'heat' => $this->last_status->shared->{$serial_number}->hvac_heater_state,
                 'alt_heat' => $this->last_status->shared->{$serial_number}->hvac_alt_heat_state,
                 'fan' => $this->last_status->shared->{$serial_number}->hvac_fan_state,
-                'auto_away' => $this->last_status->shared->{$serial_number}->auto_away,
+                'auto_away' => $this->last_status->shared->{$serial_number}->auto_away, // -1 when disabled, 0 when enabled (thermostat can set auto-away), >0 when enabled and active (thermostat is currently in auto-away mode)
                 'manual_away' => $manual_away,
                 'leaf' => $this->last_status->device->{$serial_number}->leaf,
             ),
