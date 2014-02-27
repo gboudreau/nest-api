@@ -51,9 +51,11 @@ class Nest {
     private $cache_expiration;
     private $last_status;
     
-    function __construct() {
-        $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . md5(USERNAME . PASSWORD);
-        $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . md5(USERNAME . PASSWORD);
+    function __construct($username, $password) {
+        $this->username = $username;
+        $this->password = $password;
+        $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . md5($username . $password);
+        $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . md5($username . $password);
         if ($this->use_cache()) {
             $this->loadCache();
         }
@@ -459,7 +461,7 @@ class Nest {
             // No need to login; we'll use cached values for authentication.
             return;
         }
-        $result = $this->doPOST(self::login_url, array('username' => USERNAME, 'password' => PASSWORD));
+        $result = $this->doPOST(self::login_url, array('username' => $this->username, 'password' => $this->password));
         if (!isset($result->urls)) {
             die("Error: Response to login request doesn't contain required transport URL. Response: '" . var_export($result, TRUE) . "'\n");
         }

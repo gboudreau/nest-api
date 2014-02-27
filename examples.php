@@ -12,7 +12,7 @@ date_default_timezone_set('America/Montreal');
 
 // Here's how to use this class:
 
-$nest = new Nest();
+$nest = new Nest(USERNAME, PASSWORD);
 
 echo "Location information:\n";
 $locations = $nest->getUserLocations();
