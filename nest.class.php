@@ -65,27 +65,37 @@ class Nest {
     
     /* Getters and setters */
 
+    public function getWeather($postal_code) {
+        try {
+            $weather = $this->doGET("https://home.nest.com/api/0.1/weather/forecast/" . $postal_code);
+        } catch (RuntimeException $ex) {
+            // NESTAPI_ERROR_NOT_JSON_RESPONSE is kinda normal. The forecast API will often return a '502 Bad Gateway' response... meh.
+            if ($ex->getCode() != NESTAPI_ERROR_NOT_JSON_RESPONSE) {
+                throw new RuntimeException("Unexpected issue fetching forecast.", $ex->getCode(), $ex);
+            }
+        }
+
+        return (object) array(
+            'outside_temperature' => isset($weather->now) ? $this->temperatureInUserScale((float) $weather->now->current_temperature) : NULL,
+            'outside_humidity'    => isset($weather->now) ? $weather->now->current_humidity : NULL
+        );
+    }
+
     public function getUserLocations() {
         $this->getStatus();
         $structures = (array) $this->last_status->structure;
         $user_structures = array();
         $class_name = get_class($this);
         foreach ($structures as $structure) {
-            try {
-                $weather = $this->doGET("https://home.nest.com/api/0.1/weather/forecast/" . $structure->postal_code);
-            } catch (RuntimeException $ex) {
-                // NESTAPI_ERROR_NOT_JSON_RESPONSE is kinda normal. The forecast API will often return a '502 Bad Gateway' response... meh.
-                if ($ex->getCode() != NESTAPI_ERROR_NOT_JSON_RESPONSE) {
-                    throw new RuntimeException("Unexpected issue fetching forecast.", $ex->getCode(), $ex);
-                }
-            }
+            $weather_data = $this->getWeather($structure->postal_code);
             $user_structures[] = (object) array(
                 'name' => $structure->name,
                 'address' => !empty($structure->street_address) ? $structure->street_address : NULL,
                 'city' => $structure->location,
                 'postal_code' => $structure->postal_code,
                 'country' => $structure->country_code,
-                'outside_temperature' => isset($weather->now) ? $this->temperatureInUserScale((float) $weather->now->current_temperature) : NULL,
+                'outside_temperature' => $weather_data->outside_temperature,
+                'outside_humidity' => $weather_data->outside_humidity,
                 'away' => $structure->away,
                 'away_last_changed' => date('Y-m-d H:i:s', $structure->away_timestamp),
                 'thermostats' => array_map(array($class_name, 'cleanDevices'), $structure->devices)
