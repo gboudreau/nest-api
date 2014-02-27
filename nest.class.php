@@ -69,6 +69,7 @@ class Nest {
         $this->getStatus();
         $structures = (array) $this->last_status->structure;
         $user_structures = array();
+        $class_name = get_class($this);
         foreach ($structures as $structure) {
             try {
                 $weather = $this->doGET("https://home.nest.com/api/0.1/weather/forecast/" . $structure->postal_code);
@@ -87,7 +88,7 @@ class Nest {
                 'outside_temperature' => isset($weather->now) ? $this->temperatureInUserScale((float) $weather->now->current_temperature) : NULL,
                 'away' => $structure->away,
                 'away_last_changed' => date('Y-m-d H:i:s', $structure->away_timestamp),
-                'thermostats' => array_map(array('Nest', 'cleanDevices'), $structure->devices)
+                'thermostats' => array_map(array($class_name, 'cleanDevices'), $structure->devices)
             );
         }
         return $user_structures;
