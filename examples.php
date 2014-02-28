@@ -3,8 +3,8 @@
 require_once('nest.class.php');
 
 // Your Nest username and password.
-define('USERNAME', 'you@gmail.com');
-define('PASSWORD', 'Something other than 1234 right?');
+$username = 'you@gmail.com';
+$password = 'Something other than 1234 right?';
 
 // The timezone you're in.
 // See http://php.net/manual/en/timezones.php for the possible values.
@@ -12,7 +12,7 @@ date_default_timezone_set('America/Montreal');
 
 // Here's how to use this class:
 
-$nest = new Nest();
+$nest = new Nest($username, $password);
 
 echo "Location information:\n";
 $locations = $nest->getUserLocations();

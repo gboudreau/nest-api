@@ -51,9 +51,20 @@ class Nest {
     private $cache_expiration;
     private $last_status;
     
-    function __construct() {
-        $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . md5(USERNAME . PASSWORD);
-        $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . md5(USERNAME . PASSWORD);
+    function __construct($username=null, $password=null) {
+        if ($username === null && defined('USERNAME')) {
+            $username = USERNAME;
+        }
+        if ($password === null && defined('PASSWORD')) {
+            $password = PASSWORD;
+        }
+        if ($username === null || $password === null) {
+            throw new InvalidArgumentException('Nest credentials were not provided.');
+        }
+        $this->username = $username;
+        $this->password = $password;
+        $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . md5($username . $password);
+        $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . md5($username . $password);
         if ($this->use_cache()) {
             $this->loadCache();
         }
@@ -63,29 +74,40 @@ class Nest {
     
     /* Getters and setters */
 
+    public function getWeather($postal_code) {
+        try {
+            $weather = $this->doGET("https://home.nest.com/api/0.1/weather/forecast/" . $postal_code);
+        } catch (RuntimeException $ex) {
+            // NESTAPI_ERROR_NOT_JSON_RESPONSE is kinda normal. The forecast API will often return a '502 Bad Gateway' response... meh.
+            if ($ex->getCode() != NESTAPI_ERROR_NOT_JSON_RESPONSE) {
+                throw new RuntimeException("Unexpected issue fetching forecast.", $ex->getCode(), $ex);
+            }
+        }
+
+        return (object) array(
+            'outside_temperature' => isset($weather->now) ? $this->temperatureInUserScale((float) $weather->now->current_temperature) : NULL,
+            'outside_humidity'    => isset($weather->now) ? $weather->now->current_humidity : NULL
+        );
+    }
+
     public function getUserLocations() {
         $this->getStatus();
         $structures = (array) $this->last_status->structure;
         $user_structures = array();
+        $class_name = get_class($this);
         foreach ($structures as $structure) {
-            try {
-                $weather = $this->doGET("https://home.nest.com/api/0.1/weather/forecast/" . $structure->postal_code);
-            } catch (RuntimeException $ex) {
-                // NESTAPI_ERROR_NOT_JSON_RESPONSE is kinda normal. The forecast API will often return a '502 Bad Gateway' response... meh.
-                if ($ex->getCode() != NESTAPI_ERROR_NOT_JSON_RESPONSE) {
-                    throw new RuntimeException("Unexpected issue fetching forecast.", $ex->getCode(), $ex);
-                }
-            }
+            $weather_data = $this->getWeather($structure->postal_code);
             $user_structures[] = (object) array(
                 'name' => $structure->name,
                 'address' => !empty($structure->street_address) ? $structure->street_address : NULL,
                 'city' => $structure->location,
                 'postal_code' => $structure->postal_code,
                 'country' => $structure->country_code,
-                'outside_temperature' => isset($weather->now) ? $this->temperatureInUserScale((float) $weather->now->current_temperature) : NULL,
+                'outside_temperature' => $weather_data->outside_temperature,
+                'outside_humidity' => $weather_data->outside_humidity,
                 'away' => $structure->away,
                 'away_last_changed' => date('Y-m-d H:i:s', $structure->away_timestamp),
-                'thermostats' => array_map(array('Nest', 'cleanDevices'), $structure->devices)
+                'thermostats' => array_map(array($class_name, 'cleanDevices'), $structure->devices)
             );
         }
         return $user_structures;
@@ -459,7 +481,7 @@ class Nest {
             // No need to login; we'll use cached values for authentication.
             return;
         }
-        $result = $this->doPOST(self::login_url, array('username' => USERNAME, 'password' => PASSWORD));
+        $result = $this->doPOST(self::login_url, array('username' => $this->username, 'password' => $this->password));
         if (!isset($result->urls)) {
             die("Error: Response to login request doesn't contain required transport URL. Response: '" . var_export($result, TRUE) . "'\n");
         }
