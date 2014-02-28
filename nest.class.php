@@ -51,7 +51,16 @@ class Nest {
     private $cache_expiration;
     private $last_status;
     
-    function __construct($username, $password) {
+    function __construct($username=null, $password=null) {
+        if ($username === null && defined('USERNAME')) {
+            $username = USERNAME;
+        }
+        if ($password === null && defined('PASSWORD')) {
+            $password = PASSWORD;
+        }
+        if ($username === null || $password === null) {
+            throw new InvalidArgumentException('Nest credentials were not provided.');
+        }
         $this->username = $username;
         $this->password = $password;
         $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . md5($username . $password);
