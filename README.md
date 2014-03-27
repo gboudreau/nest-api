@@ -19,6 +19,7 @@ Features
     - Next scheduled event
     - Last 10 days energy report
     - Device name, devices list
+    - Battery level (voltage)
 - Setters:
     - Target temperatures (single, or range)
     - Target temperature mode: cool, heat, range
@@ -73,7 +74,8 @@ Example output for getDeviceInfo():
         "fan": true,
         "auto_away": 0,
         "manual_away": false,
-        "leaf": false
+        "leaf": false,
+        "battery_level": 3.948
       },
       "target": {
         "mode": "range",
