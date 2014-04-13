@@ -1,14 +1,14 @@
 Nest Learning Thermostat API
 ============================
 
-This is a PHP class that will allow you to monitor and control your [Nest Learning Thermostat](http://www.nest.com/).
+This is a PHP class that will allow you to monitor and control your [Nest Learning Thermostat](http://www.nest.com/), and Nest Protect.
 
 Features
 --------
 
 - Caching so that it doesn't re-login when it doesn't need to. i.e. faster operations.
 - Getters:
-    - Current & target temparatures, humidity
+    - Current & target temperatures, humidity
     - Time to target temperature
     - Target temperature mode, fan mode
     - AC, heat, and fan status: on or off
@@ -20,6 +20,7 @@ Features
     - Last 10 days energy report
     - Device name, devices list
     - Battery level (voltage)
+    - Nest Protect device information
 - Setters:
     - Target temperatures (single, or range)
     - Target temperature mode: cool, heat, range

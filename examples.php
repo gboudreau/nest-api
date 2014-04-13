@@ -19,13 +19,18 @@ $locations = $nest->getUserLocations();
 jlog($locations);
 echo "----------\n\n";
 
-echo "Devices list:\n";
+echo "Devices list (thermostats):\n";
 $devices_serials = $nest->getDevices();
 jlog($devices_serials);
 echo "----------\n\n";
 
+echo "Devices list (Nest Protect):\n";
+$protects_serials = $nest->getDevices(DEVICE_TYPE_PROTECT);
+jlog($protects_serials);
+echo "----------\n\n";
+
 echo "Device information:\n";
-$infos = $nest->getDeviceInfo();
+$infos = $nest->getDeviceInfo($devices_serials[0]);
 jlog($infos);
 echo "----------\n\n";
 

@@ -29,6 +29,8 @@ define('AWAY_MODE_OFF', FALSE);
 define('DUALFUEL_BREAKPOINT_ALWAYS_PRIMARY', 'always-primary');
 define('DUALFUEL_BREAKPOINT_ALWAYS_ALT', 'always-alt');
 define('DEVICE_WITH_NO_NAME', 'Not Set');
+define('DEVICE_TYPE_THERMOSTAT', 'thermostat');
+define('DEVICE_TYPE_PROTECT', 'protect');
 
 define('NESTAPI_ERROR_UNDER_MAINTENANCE', 1000);
 define('NESTAPI_ERROR_EMPTY_RESPONSE', 1001);
@@ -41,6 +43,26 @@ class Nest {
     const protocol_version = 1;
     const login_url = 'https://home.nest.com/user/login';
     private $days_maps = array('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun');
+
+    private $protect_where_map = array(
+        '00000000-0000-0000-0000-000100000000' => 'Entryway',
+        '00000000-0000-0000-0000-000100000001' => 'Basement',
+        '00000000-0000-0000-0000-000100000002' => 'Hallway',
+        '00000000-0000-0000-0000-000100000003' => 'Den',
+        '00000000-0000-0000-0000-000100000004' => 'Attic', // Invisible in web UI
+        '00000000-0000-0000-0000-000100000005' => 'Master Bedroom',
+        '00000000-0000-0000-0000-000100000006' => 'Downstairs',
+        '00000000-0000-0000-0000-000100000007' => 'Garage', // Invisible in web UI
+        '00000000-0000-0000-0000-000100000008' => 'Kids Room',
+        '00000000-0000-0000-0000-000100000009' => 'Garage "Hallway"', // Invisible in web UI
+        '00000000-0000-0000-0000-00010000000a' => 'Kitchen',
+        '00000000-0000-0000-0000-00010000000b' => 'Family Room',
+        '00000000-0000-0000-0000-00010000000c' => 'Living Room',
+        '00000000-0000-0000-0000-00010000000d' => 'Bedroom',
+        '00000000-0000-0000-0000-00010000000e' => 'Office',
+        '00000000-0000-0000-0000-00010000000f' => 'Upstairs',
+        '00000000-0000-0000-0000-000100000010' => 'Dining Room',
+    );
     
     private $transport_url;
     private $access_token;
@@ -95,7 +117,15 @@ class Nest {
         $structures = (array) $this->last_status->structure;
         $user_structures = array();
         $class_name = get_class($this);
-        foreach ($structures as $structure) {
+        foreach ($structures as $struct_id => $structure) {
+            // Nest Protects at this location (structure)
+            $protects = array();
+            foreach ($this->last_status->topaz as $protect) {
+                if ($protect->structure_id == $struct_id) {
+                    $protects[] = $protect->serial_number;
+                }
+            }
+
             $weather_data = $this->getWeather($structure->postal_code);
             $user_structures[] = (object) array(
                 'name' => $structure->name,
@@ -107,7 +137,8 @@ class Nest {
                 'outside_humidity' => $weather_data->outside_humidity,
                 'away' => $structure->away,
                 'away_last_changed' => date('Y-m-d H:i:s', $structure->away_timestamp),
-                'thermostats' => array_map(array($class_name, 'cleanDevices'), $structure->devices)
+                'thermostats' => array_map(array($class_name, 'cleanDevices'), $structure->devices),
+                'protects' => $protects,
             );
         }
         return $user_structures;
@@ -165,6 +196,45 @@ class Nest {
     public function getDeviceInfo($serial_number=null) {
         $this->getStatus();
         $serial_number = $this->getDefaultSerial($serial_number);
+
+        foreach ($this->last_status->topaz as $protect) {
+            if ($serial_number == $protect->serial_number) {
+                // The specified device is a Nest Protect
+                $infos = (object) array(
+                    'co_status' => $protect->co_status,
+                    'smoke_status' => $protect->smoke_status,
+                    'line_power_present' => $protect->line_power_present,
+                    'battery_level' => $protect->battery_level,
+                    'battery_health_state' => $protect->battery_health_state,
+                    'replace_by_date' => date('Y-m-d', $protect->replace_by_date_utc_secs),
+                    'last_update' => date('Y-m-d H:i:s', $protect->{'$timestamp'}/1000),
+                    'last_manual_test' => $protect->latest_manual_test_start_utc_secs == 0 ? NULL : date('Y-m-d H:i:s', $protect->latest_manual_test_start_utc_secs),
+                    'tests_passed' => array(
+                        'led'   => $protect->component_led_test_passed,
+                        'pir'   => $protect->component_pir_test_passed,
+                        'temp'  => $protect->component_temp_test_passed,
+                        'smoke' => $protect->component_smoke_test_passed,
+                        'heat'  => $protect->component_heat_test_passed,
+                        'wifi'  => $protect->component_wifi_test_passed,
+                        'als'   => $protect->component_als_test_passed,
+                        'co'    => $protect->component_co_test_passed,
+                        'us'    => $protect->component_us_test_passed,
+                        'hum'   => $protect->component_hum_test_passed,
+                    ),
+                    'serial_number' => $protect->serial_number,
+                    'location' => $protect->structure_id,
+                    'network' => (object) array(
+                        'online' => $protect->component_wifi_test_passed,
+                        'local_ip' => $protect->wifi_ip_address,
+                        'mac_address' => $protect->wifi_mac_address
+                    ),
+                    'name' => !empty($protect->description) ? $protect->description : DEVICE_WITH_NO_NAME,
+                    'where' => isset($this->protect_where_map[$protect->spoken_where_id]) ? $this->protect_where_map[$protect->spoken_where_id] : $protect->spoken_where_id,
+                );
+                return $infos;
+            }
+        }
+
         list(, $structure) = explode('.', $this->last_status->link->{$serial_number}->structure);
         $manual_away = $this->last_status->structure->{$structure}->away;
         $mode = strtolower($this->last_status->device->{$serial_number}->current_schedule_mode);
@@ -380,7 +450,7 @@ class Nest {
     /* Helper functions */
 
     public function getStatus() {
-        $status = $this->doGET("/v2/mobile/" . $this->user);
+        $status = $this->doGET("/v3/mobile/" . $this->user);
         if (!is_object($status)) {
             die("Error: Couldn't get status from NEST API: $status\n");
         }
@@ -417,8 +487,15 @@ class Nest {
         return $this->last_status->device->{$serial_number}->temperature_scale;
     }
 
-    public function getDevices() {
+    public function getDevices($type=DEVICE_TYPE_THERMOSTAT) {
         $this->prepareForGet();
+        if ($type == DEVICE_TYPE_PROTECT) {
+            $protects = array();
+            foreach ($this->last_status->topaz as $protect) {
+                $protects[] = $protect->serial_number;
+            }
+            return $protects;
+        }
         $structure = $this->last_status->user->{$this->userid}->structures[0];
         list(, $structure_id) = explode('.', $structure);
         $devices_serials = array();
@@ -432,13 +509,16 @@ class Nest {
     private function getDefaultSerial($serial_number) {
         if (empty($serial_number)) {
             $devices_serials = $this->getDevices();
+            if (count($devices_serials) == 0) {
+                $devices_serials = $this->getDevices(DEVICE_TYPE_PROTECT);
+            }
             $serial_number = $devices_serials[0];
         }
         return $serial_number;
     }
 
     public function getDefaultDevice() {
-        $serial_number = $this->getDefaultSerial();
+        $serial_number = $this->getDefaultSerial(null);
         return $this->last_status->device->{$serial_number};
     }
 
