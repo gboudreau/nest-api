@@ -85,8 +85,12 @@ class Nest {
         }
         $this->username = $username;
         $this->password = $password;
+
         $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . md5($username . $password);
+        static::secure_touch($this->cookie_file);
+
         $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . md5($username . $password);
+        static::secure_touch($this->cache_file);
         if ($this->use_cache()) {
             $this->loadCache();
         }
@@ -701,5 +705,13 @@ class Nest {
         }
 
         return $json;
+    }
+
+    private static function secure_touch() {
+        if (file_exists($fname)) {
+            return;
+        }
+        $temp = tempnam(sys_get_temp_dir(), 'NEST');
+        rename($temp, $fname);
     }
 }
