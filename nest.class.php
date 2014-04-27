@@ -707,7 +707,7 @@ class Nest {
         return $json;
     }
 
-    private static function secure_touch() {
+    private static function secure_touch($fname) {
         if (file_exists($fname)) {
             return;
         }
