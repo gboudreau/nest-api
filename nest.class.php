@@ -277,7 +277,7 @@ class Nest {
             'location' => $structure,
             'network' => $this->getDeviceNetworkInfo($serial_number),
             'name' => !empty($this->last_status->shared->{$serial_number}->name) ? $this->last_status->shared->{$serial_number}->name : DEVICE_WITH_NO_NAME,
-            'where' => isset($this->where_map[$this->last_status->device->{$serial_number}->where_id]) ? $this->where_map[$this->last_status->device->{$serial_number}->where_id] : $this->last_status->device->{$serial_number}->where_id
+            'where' => isset($this->last_status->device->{$serial_number}->where_id) ? isset($this->where_map[$this->last_status->device->{$serial_number}->where_id]) ? $this->where_map[$this->last_status->device->{$serial_number}->where_id] : $this->last_status->device->{$serial_number}->where_id : ""
         );
         if($this->last_status->device->{$serial_number}->has_humidifier) {
           $infos->current_state->humidifier= $this->last_status->device->{$serial_number}->humidifier_state;
