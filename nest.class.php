@@ -90,10 +90,11 @@ class Nest {
         static::secure_touch($this->cookie_file);
 
         $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . md5($username . $password);
+        if (file_exists($this->cache_file)) {
+             $this->loadCache();
+         }        
         static::secure_touch($this->cache_file);
-        if ($this->use_cache()) {
-            $this->loadCache();
-        }
+        
         // Log in, if needed
         $this->login();
     }
