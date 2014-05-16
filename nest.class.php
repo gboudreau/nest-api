@@ -90,9 +90,9 @@ class Nest {
         static::secure_touch($this->cookie_file);
 
         $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . md5($username . $password);
-        if (file_exists($this->cache_file)) {
-             $this->loadCache();
-         }        
+        
+        // Attempt to load the cache
+        $this->loadCache();
         static::secure_touch($this->cache_file);
         
         // Log in, if needed
@@ -122,10 +122,11 @@ class Nest {
         $structures = (array) $this->last_status->structure;
         $user_structures = array();
         $class_name = get_class($this);
+        $topaz = isset($this->last_status->topaz) ? $this->last_status->topaz : array();
         foreach ($structures as $struct_id => $structure) {
             // Nest Protects at this location (structure)
             $protects = array();
-            foreach ($this->last_status->topaz as $protect) {
+            foreach ($topaz as $protect) {
                 if ($protect->structure_id == $struct_id) {
                     $protects[] = $protect->serial_number;
                 }
@@ -202,7 +203,8 @@ class Nest {
         $this->getStatus();
         $serial_number = $this->getDefaultSerial($serial_number);
 
-        foreach ($this->last_status->topaz as $protect) {
+        $topaz = isset($this->last_status->topaz) ? $this->last_status->topaz : array();
+        foreach ($topaz as $protect) {
             if ($serial_number == $protect->serial_number) {
                 // The specified device is a Nest Protect
                 $infos = (object) array(
@@ -585,7 +587,13 @@ class Nest {
     }
     
     private function loadCache() {
-        $vars = unserialize(file_get_contents($this->cache_file));
+        if (!file_exists($this->cache_file)) {
+            return;
+        }
+        $vars = @unserialize(file_get_contents($this->cache_file));
+        if ($vars === false) {
+            return;
+        }
         $this->transport_url = $vars['transport_url'];
         $this->access_token = $vars['access_token'];
         $this->user = $vars['user'];
