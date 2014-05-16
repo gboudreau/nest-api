@@ -122,10 +122,11 @@ class Nest {
         $structures = (array) $this->last_status->structure;
         $user_structures = array();
         $class_name = get_class($this);
+        $topaz = isset($this->last_status->topaz) ? $this->last_status->topaz : array();
         foreach ($structures as $struct_id => $structure) {
             // Nest Protects at this location (structure)
             $protects = array();
-            foreach ($this->last_status->topaz as $protect) {
+            foreach ($topaz as $protect) {
                 if ($protect->structure_id == $struct_id) {
                     $protects[] = $protect->serial_number;
                 }
@@ -202,7 +203,8 @@ class Nest {
         $this->getStatus();
         $serial_number = $this->getDefaultSerial($serial_number);
 
-        foreach ($this->last_status->topaz as $protect) {
+        $topaz = isset($this->last_status->topaz) ? $this->last_status->topaz : array();
+        foreach ($topaz as $protect) {
             if ($serial_number == $protect->serial_number) {
                 // The specified device is a Nest Protect
                 $infos = (object) array(
