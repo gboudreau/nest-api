@@ -90,9 +90,9 @@ class Nest {
         static::secure_touch($this->cookie_file);
 
         $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . md5($username . $password);
-        if (file_exists($this->cache_file)) {
-             $this->loadCache();
-         }        
+        
+        // Attempt to load the cache
+        $this->loadCache();
         static::secure_touch($this->cache_file);
         
         // Log in, if needed
@@ -585,7 +585,13 @@ class Nest {
     }
     
     private function loadCache() {
-        $vars = unserialize(file_get_contents($this->cache_file));
+        if (!file_exists($this->cache_file)) {
+            return;
+        }
+        $vars = @unserialize(file_get_contents($this->cache_file));
+        if ($vars === false) {
+            return;
+        }
         $this->transport_url = $vars['transport_url'];
         $this->access_token = $vars['access_token'];
         $this->user = $vars['user'];
