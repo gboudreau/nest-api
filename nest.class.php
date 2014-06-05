@@ -457,10 +457,20 @@ class Nest {
 
     /* Helper functions */
 
-    public function getStatus() {
-        $status = $this->doGET("/v3/mobile/" . $this->user);
+    public function getStatus($retry=TRUE) {
+        $url = "/v3/mobile/" . $this->user;
+        $status = $this->doGET($url);
         if (!is_object($status)) {
-            die("Error: Couldn't get status from NEST API: $status\n");
+            throw new RuntimeException("Error: Couldn't get status from NEST API: $status");
+        }
+        if (@$status->cmd == 'REINIT_STATE') {
+            if ($retry) {
+                @unlink($this->cookie_file);
+                @unlink($this->cache_file);
+                $this->login();
+                return $this->getStatus(FALSE);
+            }
+            throw new RuntimeException("Error: HTTP request to $url returned cmd = REINIT_STATE. Retrying failed.");
         }
         $this->last_status = $status;
         $this->saveCache();
