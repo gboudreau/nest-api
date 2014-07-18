@@ -134,7 +134,7 @@ class Nest {
 
             $weather_data = $this->getWeather($structure->postal_code);
             $user_structures[] = (object) array(
-                'name' => $structure->name,
+                'name' => isset($structure->name)?$structure->name:'',
                 'address' => !empty($structure->street_address) ? $structure->street_address : NULL,
                 'city' => $structure->location,
                 'postal_code' => $structure->postal_code,
@@ -509,7 +509,8 @@ class Nest {
         $this->prepareForGet();
         if ($type == DEVICE_TYPE_PROTECT) {
             $protects = array();
-            foreach ($this->last_status->topaz as $protect) {
+            $topaz = isset($this->last_status->topaz) ? $this->last_status->topaz : array();
+            foreach ($topaz as $protect) {
                 $protects[] = $protect->serial_number;
             }
             return $protects;
