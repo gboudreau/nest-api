@@ -1,47 +1,15 @@
 <?php
 
-define('DATE_FORMAT','Y-m-d');
-define('DATETIME_FORMAT', DATE_FORMAT . ' H:i:s');
-define('TARGET_TEMP_MODE_COOL', 'cool');
-define('TARGET_TEMP_MODE_HEAT', 'heat');
-define('TARGET_TEMP_MODE_RANGE', 'range');
-define('TARGET_TEMP_MODE_OFF', 'off');
-define('FAN_MODE_AUTO', 'auto');
-define('FAN_MODE_ON', 'on');
-define('FAN_MODE_EVERY_DAY_ON', 'on');
-define('FAN_MODE_EVERY_DAY_OFF', 'auto');
-define('FAN_MODE_MINUTES_PER_HOUR', 'duty-cycle');
-define('FAN_MODE_MINUTES_PER_HOUR_15', FAN_MODE_MINUTES_PER_HOUR . ',900');
-define('FAN_MODE_MINUTES_PER_HOUR_30', FAN_MODE_MINUTES_PER_HOUR . ',1800');
-define('FAN_MODE_MINUTES_PER_HOUR_45', FAN_MODE_MINUTES_PER_HOUR . ',2700');
-define('FAN_MODE_MINUTES_PER_HOUR_ALWAYS_ON', 'on,3600');
-define('FAN_MODE_TIMER', '');
-define('FAN_TIMER_15M', ',900');
-define('FAN_TIMER_30M', ',1800');
-define('FAN_TIMER_45M', ',2700');
-define('FAN_TIMER_1H', ',3600');
-define('FAN_TIMER_2H', ',7200');
-define('FAN_TIMER_4H', ',14400');
-define('FAN_TIMER_8H', ',28800');
-define('FAN_TIMER_12H', ',43200');
-define('AWAY_MODE_ON', TRUE);
-define('AWAY_MODE_OFF', FALSE);
-define('DUALFUEL_BREAKPOINT_ALWAYS_PRIMARY', 'always-primary');
-define('DUALFUEL_BREAKPOINT_ALWAYS_ALT', 'always-alt');
-define('DEVICE_WITH_NO_NAME', 'Not Set');
-define('DEVICE_TYPE_THERMOSTAT', 'thermostat');
-define('DEVICE_TYPE_PROTECT', 'protect');
+require_once 'Nest/Constants.php';
 
-define('NESTAPI_ERROR_UNDER_MAINTENANCE', 1000);
-define('NESTAPI_ERROR_EMPTY_RESPONSE', 1001);
-define('NESTAPI_ERROR_NOT_JSON_RESPONSE', 1002);
-define('NESTAPI_ERROR_API_JSON_ERROR', 1003);
-define('NESTAPI_ERROR_API_OTHER_ERROR', 1004);
+use Nest\HTTP as http;
+use Nest\Authentication as Authentication;
+
+define('DEBUG', FALSE);
 
 class Nest {
-    const user_agent = 'Nest/2.1.3 CFNetwork/548.0.4';
-    const protocol_version = 1;
-    const login_url = 'https://home.nest.com/user/login';
+	private $auth;
+	private $http;
     private $days_maps = array('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun');
 
     private $where_map = array(
@@ -63,7 +31,7 @@ class Nest {
         '00000000-0000-0000-0000-00010000000f' => 'Upstairs',
         '00000000-0000-0000-0000-000100000010' => 'Dining Room',
     );
-    
+    /*
     private $transport_url;
     private $access_token;
     private $user;
@@ -71,32 +39,14 @@ class Nest {
     private $cookie_file;
     private $cache_file;
     private $cache_expiration;
+    */
     private $last_status;
     
     function __construct($username=null, $password=null) {
-        if ($username === null && defined('USERNAME')) {
-            $username = USERNAME;
-        }
-        if ($password === null && defined('PASSWORD')) {
-            $password = PASSWORD;
-        }
-        if ($username === null || $password === null) {
-            throw new InvalidArgumentException('Nest credentials were not provided.');
-        }
-        $this->username = $username;
-        $this->password = $password;
-
-        $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . md5($username . $password);
-        static::secure_touch($this->cookie_file);
-
-        $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . md5($username . $password);
+    	$this->auth = new Authentication($username,$password);
+    	$this->http = new http($this->auth);
         
-        // Attempt to load the cache
-        $this->loadCache();
-        static::secure_touch($this->cache_file);
-        
-        // Log in, if needed
-        $this->login();
+        $this->auth->login();
     }
     
     /* Getters and setters */
@@ -107,7 +57,7 @@ class Nest {
             if (!empty($country_code)) {
                 $url .= ",$country_code";
             }
-            $weather = $this->doGET($url);
+            $weather = $this->http->GET($url);
         } catch (RuntimeException $ex) {
             // NESTAPI_ERROR_NOT_JSON_RESPONSE is kinda normal. The forecast API will often return a '502 Bad Gateway' response... meh.
             if ($ex->getCode() != NESTAPI_ERROR_NOT_JSON_RESPONSE) {
@@ -327,7 +277,7 @@ class Nest {
 
         $url = '/v5/subscribe';
     
-        return $this->doPOST($url, json_encode($payload));
+        return $this->http->POST($url, json_encode($payload));
     }
 
     public function setTargetTemperatureMode($mode, $temperature, $serial_number=null) {
@@ -341,7 +291,7 @@ class Nest {
             $temp_low = $this->temperatureInCelsius($temperature[0], $serial_number);
             $temp_high = $this->temperatureInCelsius($temperature[1], $serial_number);
             $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature_low' => $temp_low, 'target_temperature_high' => $temp_high));
-            $set_temp_result = $this->doPOST("/v2/put/shared." . $serial_number, $data);
+            $set_temp_result = $this->http->POST("/v2/put/shared." . $serial_number, $data);
         } else if ($mode != TARGET_TEMP_MODE_OFF) {
             // heat or cool
             if (!is_numeric($temperature)) {
@@ -350,18 +300,18 @@ class Nest {
             }
             $temperature = $this->temperatureInCelsius($temperature, $serial_number);
             $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature' => $temperature));
-            $set_temp_result = $this->doPOST("/v2/put/shared." . $serial_number, $data);
+            $set_temp_result = $this->http->POST("/v2/put/shared." . $serial_number, $data);
         }
 
         $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature_type' => $mode));
-        return $this->doPOST("/v2/put/shared." . $serial_number, $data);
+        return $this->http->POST("/v2/put/shared." . $serial_number, $data);
     }
 
     public function setTargetTemperature($temperature, $serial_number=null) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $temperature = $this->temperatureInCelsius($temperature, $serial_number);
         $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature' => $temperature));
-        return $this->doPOST("/v2/put/shared." . $serial_number, $data);
+        return $this->http->POST("/v2/put/shared." . $serial_number, $data);
     }
     
     public function setTargetTemperatures($temp_low, $temp_high, $serial_number=null) {
@@ -369,7 +319,7 @@ class Nest {
         $temp_low = $this->temperatureInCelsius($temp_low, $serial_number);
         $temp_high = $this->temperatureInCelsius($temp_high, $serial_number);
         $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature_low' => $temp_low, 'target_temperature_high' => $temp_high));
-        return $this->doPOST("/v2/put/shared." . $serial_number, $data);
+        return $this->http->POST("/v2/put/shared." . $serial_number, $data);
     }
 
     public function setAwayTemperatures($temp_low, $temp_high, $serial_number=null) {
@@ -390,7 +340,7 @@ class Nest {
             $data['away_temperature_high'] = $temp_high;
         }
         $data = json_encode($data);
-        return $this->doPOST("/v2/put/device." . $serial_number, $data);
+        return $this->http->POST("/v2/put/device." . $serial_number, $data);
     }
 
     public function setFanMode($mode, $serial_number=null) {
@@ -431,13 +381,13 @@ class Nest {
     public function cancelFanModeOnWithTimer($serial_number=null) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $data = json_encode(array('fan_timer_timeout' => 0));
-        return $this->doPOST("/v2/put/device." . $serial_number, $data);
+        return $this->http->POST("/v2/put/device." . $serial_number, $data);
     }
 
     public function setFanEveryDaySchedule($start_hour, $end_hour, $serial_number=null) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $data = json_encode(array('fan_duty_start_time' => $start_hour*3600, 'fan_duty_end_time' => $end_hour*3600));
-        return $this->doPOST("/v2/put/device." . $serial_number, $data);
+        return $this->http->POST("/v2/put/device." . $serial_number, $data);
     }
 
     public function turnOff($serial_number=null) {
@@ -448,13 +398,13 @@ class Nest {
         $serial_number = $this->getDefaultSerial($serial_number);
         $data = json_encode(array('away' => $away, 'away_timestamp' => time(), 'away_setter' => 0));
         $structure_id = $this->getDeviceInfo($serial_number)->location;
-        return $this->doPOST("/v2/put/structure." . $structure_id, $data);
+        return $this->http->POST("/v2/put/structure." . $structure_id, $data);
     }
     
     public function setAutoAwayEnabled($enabled, $serial_number=null) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $data = json_encode(array('auto_away_enable' => $enabled));
-        return $this->doPOST("/v2/put/device." . $serial_number, $data);
+        return $this->http->POST("/v2/put/device." . $serial_number, $data);
     }
 
     public function setDualFuelBreakpoint($breakpoint, $serial_number=null) {
@@ -465,26 +415,26 @@ class Nest {
         } else {
             $data = json_encode(array('dual_fuel_breakpoint_override' => $breakpoint));
         }
-        return $this->doPOST("/v2/put/device." . $serial_number, $data);
+        return $this->http->POST("/v2/put/device." . $serial_number, $data);
     }
 
     public function enableHumidifier($enabled, $serial_number=null) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $data = json_encode(array('target_humidity_enabled' => ((boolean)$enabled)));
-        return $this->doPOST("/v2/put/device." . $serial_number, $data);
+        return $this->http->POST("/v2/put/device." . $serial_number, $data);
     }
 
     public function setHumidity($humidity, $serial_number=null) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $data = json_encode(array('target_humidity' => ((double)$humidity)));
-        return $this->doPOST("/v2/put/device." . $serial_number, $data);
+        return $this->http->POST("/v2/put/device." . $serial_number, $data);
     }
 
     /* Helper functions */
 
     public function getStatus($retry=TRUE) {
-        $url = "/v3/mobile/" . $this->user;
-        $status = $this->doGET($url);
+        $url = "/v3/mobile/" . $this->auth->getUser();
+        $status = $this->http->GET($url);
         if (!is_object($status)) {
             throw new RuntimeException("Error: Couldn't get status from NEST API: $status");
         }
@@ -492,13 +442,13 @@ class Nest {
             if ($retry) {
                 @unlink($this->cookie_file);
                 @unlink($this->cache_file);
-                $this->login();
+                $this->auth->login();
                 return $this->getStatus(FALSE);
             }
             throw new RuntimeException("Error: HTTP request to $url returned cmd = REINIT_STATE. Retrying failed.");
         }
         $this->last_status = $status;
-        $this->saveCache();
+        $this->auth->saveCache();
         return $status;
     }
 
@@ -540,7 +490,7 @@ class Nest {
             }
             return $protects;
         }
-        $structure = $this->last_status->user->{$this->userid}->structures[0];
+        $structure = $this->last_status->user->{$this->auth->getUserId()}->structures[0];
         list(, $structure_id) = explode('.', $structure);
         $devices_serials = array();
         foreach ($this->last_status->structure->{$structure_id}->devices as $device) {
@@ -593,167 +543,12 @@ class Nest {
             $data['fan_timer_duration'] = $timer;
             $data['fan_timer_timeout'] = time() + $timer;
         }
-        return $this->doPOST("/v2/put/device." . $serial_number, json_encode($data));
+        return $this->http->POST("/v2/put/device." . $serial_number, json_encode($data));
     }
 
     private function prepareForGet() {
         if (!isset($this->last_status)) {
             $this->getStatus();
         }
-    }
-
-    private function login() {
-        if ($this->use_cache()) {
-            // No need to login; we'll use cached values for authentication.
-            return;
-        }
-        $result = $this->doPOST(self::login_url, array('username' => $this->username, 'password' => $this->password));
-        if (!isset($result->urls)) {
-            die("Error: Response to login request doesn't contain required transport URL. Response: '" . var_export($result, TRUE) . "'\n");
-        }
-        $this->transport_url = $result->urls->transport_url;
-        $this->access_token = $result->access_token;
-        $this->userid = $result->userid;
-        $this->user = $result->user;
-        $this->cache_expiration = strtotime($result->expires_in);
-        $this->saveCache();
-    }
-
-    private function use_cache() {
-        return file_exists($this->cookie_file) && file_exists($this->cache_file) && !empty($this->cache_expiration) && $this->cache_expiration > time();
-    }
-    
-    private function loadCache() {
-        if (!file_exists($this->cache_file)) {
-            return;
-        }
-        $vars = @unserialize(file_get_contents($this->cache_file));
-        if ($vars === false) {
-            return;
-        }
-        $this->transport_url = $vars['transport_url'];
-        $this->access_token = $vars['access_token'];
-        $this->user = $vars['user'];
-        $this->userid = $vars['userid'];
-        $this->cache_expiration = $vars['cache_expiration'];
-        $this->last_status = $vars['last_status'];
-    }
-    
-    private function saveCache() {
-        $vars = array(
-            'transport_url' => $this->transport_url,
-            'access_token' => $this->access_token,
-            'user' => $this->user,
-            'userid' => $this->userid,
-            'cache_expiration' => $this->cache_expiration,
-            'last_status' => @$this->last_status
-        );
-        file_put_contents($this->cache_file, serialize($vars));
-    }
-
-    private function doGET($url) {
-        return $this->doRequest('GET', $url);
-    }
-    
-    private function doPOST($url, $data_fields) {
-        return $this->doRequest('POST', $url, $data_fields);
-    }
-
-    private function doRequest($method, $url, $data_fields=null, $with_retry=TRUE) {
-        $ch = curl_init();
-        if ($url[0] == '/') {
-            $url = $this->transport_url . $url;
-        }
-        $headers = array('X-nl-protocol-version: ' . self::protocol_version);
-        if (isset($this->userid)) {
-            $headers[] = 'X-nl-user-id: ' . $this->userid;
-            $headers[] = 'Authorization: Basic ' . $this->access_token;
-        }
-        if (is_array($data_fields)) {
-            $data = array();
-            foreach($data_fields as $k => $v) {
-                $data[] = "$k=" . urlencode($v);
-            }
-            $data = implode('&', $data);
-        } else if (is_string($data_fields)) {
-            $data = $data_fields;
-        }
-        curl_setopt($ch, CURLOPT_URL, $url);
-        curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-        curl_setopt($ch, CURLOPT_HEADER, FALSE);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
-        curl_setopt($ch, CURLOPT_AUTOREFERER, TRUE);
-        curl_setopt($ch, CURLOPT_USERAGENT, self::user_agent); 
-        curl_setopt($ch, CURLOPT_COOKIEJAR, $this->cookie_file);
-        curl_setopt($ch, CURLOPT_COOKIEFILE, $this->cookie_file);
-        if ($method == 'POST') {
-            curl_setopt($ch, CURLOPT_POST, TRUE);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-            $headers[] = 'Content-length: ' . strlen($data);
-        }
-        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
-        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, TRUE); // for security this should always be set to true.
-        curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);    // for security this should always be set to 2.
-        curl_setopt($ch, CURLOPT_SSLVERSION, 1);        // Nest servers now require TLSv1; won't work with SSLv2 or even SSLv3!
-
-        // Update cacert.pem (valid CA certificates list) from the cURL website once a month
-        $curl_cainfo = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cacert.pem';
-        $last_month = time()-30*24*60*60;
-        if (!file_exists($curl_cainfo) || filemtime($curl_cainfo) < $last_month || filesize($curl_cainfo) < 100000) {
-            file_put_contents($curl_cainfo, file_get_contents('http://curl.haxx.se/ca/cacert.pem'));
-        }
-        if (file_exists($curl_cainfo) && filesize($curl_cainfo) > 100000) {
-            curl_setopt($ch, CURLOPT_CAINFO, $curl_cainfo);
-        }
-        $response = curl_exec($ch);
-        $info = curl_getinfo($ch);
-        
-        if ($info['http_code'] == 401 || (!$response && curl_errno($ch) != 0)) {
-            if ($with_retry && $this->use_cache()) {
-                // Received 401, and was using cached data; let's try to re-login and retry.
-                @unlink($this->cookie_file);
-                @unlink($this->cache_file);
-                if ($info['http_code'] == 401) {
-                    $this->login();
-                }
-                return $this->doRequest($method, $url, $data_fields, !$with_retry);
-            } else {
-                throw new RuntimeException("Error: HTTP request to $url returned an error: " . curl_error($ch), curl_errno($ch));
-            }
-        }
-        
-        $json = json_decode($response);
-        if (!is_object($json) && ($method == 'GET' || $url == self::login_url)) {
-            if (strpos($response, "currently performing maintenance on your Nest account") !== FALSE) {
-                throw new RuntimeException("Error: Account is under maintenance; API temporarily unavailable.", NESTAPI_ERROR_UNDER_MAINTENANCE);
-            }
-            if (empty($response)) {
-                throw new RuntimeException("Error: Received empty response from request to $url.", NESTAPI_ERROR_EMPTY_RESPONSE);
-            }
-            throw new RuntimeException("Error: Response from request to $url is not valid JSON data. Response: " . str_replace(array("\n","\r"), '', $response), NESTAPI_ERROR_NOT_JSON_RESPONSE);
-        }
-
-        if ($info['http_code'] == 400) {
-            if (!is_object($json)) {
-                throw new RuntimeException("Error: HTTP 400 from request to $url. Response: " . str_replace(array("\n","\r"), '', $response), NESTAPI_ERROR_API_OTHER_ERROR);
-            }
-            throw new RuntimeException("Error: HTTP 400 from request to $url. JSON error: $json->error - $json->error_description", NESTAPI_ERROR_API_JSON_ERROR);
-        }
-
-        // No body returned; return a boolean value that confirms a 200 OK was returned.
-        if ($info['download_content_length'] == 0) {
-            return $info['http_code'] == 200;
-        }
-
-        return $json;
-    }
-
-    private static function secure_touch($fname) {
-        if (file_exists($fname)) {
-            return;
-        }
-        $temp = tempnam(sys_get_temp_dir(), 'NEST');
-        rename($temp, $fname);
     }
 }
