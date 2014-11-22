@@ -2,7 +2,7 @@
 
 require_once 'Nest/Constants.php';
 
-use Nest\HTTP as http;
+use Nest\Http as Http;
 use Nest\Authentication as Authentication;
 
 define('DEBUG', FALSE);
@@ -44,7 +44,7 @@ class Nest {
     
     function __construct($username=null, $password=null) {
     	$this->auth = new Authentication($username,$password);
-    	$this->http = new http($this->auth);
+    	$this->http = new Http($this->auth);
         
         $this->auth->login();
     }

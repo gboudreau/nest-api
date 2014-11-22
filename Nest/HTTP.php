@@ -3,7 +3,7 @@ namespace Nest;
 
 use Nest\Authentication as Auth;
 
-class HTTP extends BaseHttp {
+class Http extends BaseHttp {
 	const user_agent = 'Nest/2.1.3 CFNetwork/548.0.4';
 	const protocol_version = 1;
 	
