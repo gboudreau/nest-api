@@ -26,12 +26,12 @@ class Authentication{
 		$this->username = $username;
 		$this->password = $password;
 		
-		$tempFileId = md5($username);
+		$fileId = md5($username);
 		
-		$this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . $tempFileId;
+		$this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . $fileId;
 		static::secure_touch($this->cookie_file);
 	
-		$this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . $tempFileId;
+		$this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . $fileId;
 	
 		// Attempt to load the cache
 		$this->loadCache();
