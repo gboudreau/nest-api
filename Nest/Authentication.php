@@ -33,17 +33,13 @@ class Authentication{
 	
 		$this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . $fileId;
 	
-		// Attempt to load the cache
-		$this->loadCache();
-		static::secure_touch($this->cache_file);
-	
 		// Log in, if needed
 		$this->login();
 	}
 	
 	public function login() {
-		if ($this->use_cache()) {
-			// No need to login; we'll use cached values for authentication.
+		if ($this->loadCache()) {			
+			static::secure_touch($this->cache_file);
 			return;
 		}
 		
@@ -87,17 +83,14 @@ class Authentication{
 		return $this->userid;
 	}
 	
-	public function use_cache() {
-		return file_exists($this->cookie_file) && file_exists($this->cache_file) && !empty($this->cache_expiration) && $this->cache_expiration > time();
-	}
-	
 	public function loadCache() {
-		if (!file_exists($this->cache_file)) {
-			return;
+		$cacheIsValid = false;
+		if (!file_exists($this->cache_file) && !file_exists($this->cookie_file)) {
+			return $cacheIsValid;
 		}
 		$vars = @unserialize(file_get_contents($this->cache_file));
 		if ($vars === false) {
-			return;
+			return $cacheIsValid;
 		}
 		$this->transport_url = $vars['transport_url'];
 		$this->access_token = $vars['access_token'];
@@ -105,6 +98,10 @@ class Authentication{
 		$this->userid = $vars['userid'];
 		$this->cache_expiration = $vars['cache_expiration'];
 		$this->last_status = $vars['last_status'];
+		
+		$cacheIsValid = $this->cache_expiration > time();
+		
+		return $cacheIsValid;
 	}
 	
 	public function saveCache() {
