@@ -35,6 +35,8 @@ Features
 Usage
 -----
 
+You can just download nest.class.php and require/include it, or use composer: `require "gboudreau/nest-api": "dev-master"`.
+
 See examples.php for details, but here's a Quick Start.
 
     <?php
