@@ -39,72 +39,78 @@ You can just download nest.class.php and require/include it, or use composer: `r
 
 See examples.php for details, but here's a Quick Start.
 
-    <?php
+```php
+<?php
+
+require_once('nest.class.php');
+
+// Your Nest username and password.
+define('USERNAME', 'you@gmail.com');
+define('PASSWORD', 'Something other than 1234 right?');
+
+$nest = new Nest();
+
+// Get the device information:
+$infos = $nest->getDeviceInfo();
+print_r($infos);
     
-    require_once('nest.class.php');
+// Print the current temperature
+printf("Current temperature: %.02f degrees %s\n", $infos->current_state->temperature, $infos->scale);
 
-    // Your Nest username and password.
-    define('USERNAME', 'you@gmail.com');
-    define('PASSWORD', 'Something other than 1234 right?');
-
-    $nest = new Nest();
-
-    // Get the device information:
-    $infos = $nest->getDeviceInfo();
-    print_r($infos);
+// Cool to 23
+$nest->setTargetTemperatureMode(TARGET_TEMP_MODE_COOL, 23.0);
     
-    // Print the current temperature
-    printf("Current temperature: %.02f degrees %s\n", $infos->current_state->temperature, $infos->scale);
-    
-    // Cool to 23
-    $nest->setTargetTemperatureMode(TARGET_TEMP_MODE_COOL, 23.0);
-    
-    // Set Away mode
-    $nest->setAway(TRUE);
+// Set Away mode
+$nest->setAway(TRUE);
 
-    // Turn off Away mode
-    $nest->setAway(FALSE);
+// Turn off Away mode
+$nest->setAway(FALSE);
+```
 
-Example output for getDeviceInfo():
+Example output for `getDeviceInfo()`:
 
-    {
-      "current_state": {
-        "mode": "range",
-        "temperature": 24.09999,
-        "humidity": 42,
-        "ac": false,
-        "heat": false,
-        "fan": true,
-        "auto_away": 0,
-        "manual_away": false,
-        "leaf": false,
-        "battery_level": 3.948
-      },
-      "target": {
-        "mode": "range",
-        "temperature": [
-          23,
-          26
-        ],
-        "time_to_target": 0
-      },
-      "serial_number": "01AB02BA117210S5",
-      "scale": "C",
-      "location": "1061f350-a2f1-111e-b9eb-123e8b139117",
-      "network": {
-        "online": true,
-        "last_connection": "2012-09-30 21:26:25",
-        "wan_ip": "173.246.19.71",
-        "local_ip": "192.168.1.201",
-        "mac_address": "18b430046194"
-      }
-    }
+```json
+{
+  "current_state": {
+    "mode": "range",
+    "temperature": 24.09999,
+    "humidity": 42,
+    "ac": false,
+    "heat": false,
+    "fan": true,
+    "auto_away": 0,
+    "manual_away": false,
+    "leaf": false,
+    "battery_level": 3.948
+  },
+  "target": {
+    "mode": "range",
+    "temperature": [
+      23,
+      26
+    ],
+    "time_to_target": 0
+  },
+  "serial_number": "01AB02BA117210S5",
+  "scale": "C",
+  "location": "1061f350-a2f1-111e-b9eb-123e8b139117",
+  "network": {
+    "online": true,
+    "last_connection": "2012-09-30 21:26:25",
+    "wan_ip": "173.246.19.71",
+    "local_ip": "192.168.1.201",
+    "mac_address": "18b430046194"
+  }
+}
+```
 
 Troubleshooting
 ---------------
 If you have any issues, try adding this at the top of your PHP script, to ask PHP to echo all errors and warnings.
 
-    error_reporting(E_ALL);
+```php
+error_reporting(E_ALL);
+```
 
 Acknowledgements
 ----------------
