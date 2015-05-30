@@ -546,6 +546,7 @@ class Nest {
         return (object) array(
             'online' => $connection_info->online,
             'last_connection' => date('Y-m-d H:i:s', $connection_info->last_connection/1000),
+            'last_connection_UTC' => gmdate("Y-m-d H:i:s", $connection_info->last_connection/1000),
             'wan_ip' => @$connection_info->last_ip,
             'local_ip' => $this->last_status->device->{$serial_number}->local_ip,
             'mac_address' => $this->last_status->device->{$serial_number}->mac_address
