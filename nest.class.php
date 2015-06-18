@@ -199,10 +199,9 @@ class Nest {
         return $next_event;
     }
 
-        public function getDeviceInfo($serial_number=null) {
+    public function getDeviceInfo($serial_number=null) {
         $this->getStatus();
         $serial_number = $this->getDefaultSerial($serial_number);
-
         $topaz = isset($this->last_status->topaz) ? $this->last_status->topaz : array();
         foreach ($topaz as $protect) {
             if ($serial_number == $protect->serial_number) {
@@ -251,7 +250,59 @@ class Nest {
                     'where' => isset($this->where_map[$protect->spoken_where_id]) ? $this->where_map[$protect->spoken_where_id] : $protect->spoken_where_id,
                 );
                 return $infos;
+            }
+        }
 
+        list(, $structure) = explode('.', $this->last_status->link->{$serial_number}->structure);
+        $manual_away = $this->last_status->structure->{$structure}->away;
+        $mode = strtolower($this->last_status->device->{$serial_number}->current_schedule_mode);
+        $target_mode = $this->last_status->shared->{$serial_number}->target_temperature_type;
+        if ($manual_away || $mode == 'away' || $this->last_status->shared->{$serial_number}->auto_away > 0) {
+            $mode = $mode . ',away';
+            $target_mode = 'range';
+            $target_temperatures = array($this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->away_temperature_low), $this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->away_temperature_high));
+        } else if ($mode == 'range') {
+            $target_mode = 'range';
+            $target_temperatures = array($this->temperatureInUserScale((float) $this->last_status->shared->{$serial_number}->target_temperature_low), $this->temperatureInUserScale((float) $this->last_status->shared->{$serial_number}->target_temperature_high));
+        } else {
+            $target_temperatures = $this->temperatureInUserScale((float) $this->last_status->shared->{$serial_number}->target_temperature);
+        }
+        $infos = (object) array(
+            'current_state' => (object) array(
+                'mode' => $mode,
+                'temperature' => $this->temperatureInUserScale((float) $this->last_status->shared->{$serial_number}->current_temperature),
+                'humidity' => $this->last_status->device->{$serial_number}->current_humidity,
+                'ac' => $this->last_status->shared->{$serial_number}->hvac_ac_state,
+                'heat' => $this->last_status->shared->{$serial_number}->hvac_heater_state,
+                'alt_heat' => $this->last_status->shared->{$serial_number}->hvac_alt_heat_state,
+                'fan' => $this->last_status->shared->{$serial_number}->hvac_fan_state,
+                'auto_away' => $this->last_status->shared->{$serial_number}->auto_away, // -1 when disabled, 0 when enabled (thermostat can set auto-away), >0 when enabled and active (thermostat is currently in auto-away mode)
+                'manual_away' => $manual_away,
+                'leaf' => $this->last_status->device->{$serial_number}->leaf,
+                'battery_level' => $this->last_status->device->{$serial_number}->battery_level,
+            ),
+            'target' => (object) array(
+                'mode' => $target_mode,
+                'temperature' => $target_temperatures,
+                'time_to_target' => $this->last_status->device->{$serial_number}->time_to_target
+            ),
+            'serial_number' => $this->last_status->device->{$serial_number}->serial_number,
+            'scale' => $this->last_status->device->{$serial_number}->temperature_scale,
+            'location' => $structure,
+            'network' => $this->getDeviceNetworkInfo($serial_number),
+            'name' => !empty($this->last_status->shared->{$serial_number}->name) ? $this->last_status->shared->{$serial_number}->name : DEVICE_WITH_NO_NAME,
+            'auto_cool' => ceil($this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->leaf_threshold_cool)),
+            'auto_heat' => floor($this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->leaf_threshold_heat)),
+            'where' => isset($this->last_status->device->{$serial_number}->where_id) ? isset($this->where_map[$this->last_status->device->{$serial_number}->where_id]) ? $this->where_map[$this->last_status->device->{$serial_number}->where_id] : $this->last_status->device->{$serial_number}->where_id : ""
+        );
+        if($this->last_status->device->{$serial_number}->has_humidifier) {
+          $infos->current_state->humidifier= $this->last_status->device->{$serial_number}->humidifier_state;
+          $infos->target->humidity = $this->last_status->device->{$serial_number}->target_humidity;
+          $infos->target->humidity_enabled = $this->last_status->device->{$serial_number}->target_humidity_enabled;
+        }
+
+        return $infos;
+    }
   
     public function getEnergyLatest($serial_number=null) {
         $serial_number = $this->getDefaultSerial($serial_number);
