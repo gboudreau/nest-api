@@ -99,9 +99,13 @@ class Nest {
     
     /* Getters and setters */
 
-    public function getWeather($postal_code) {
+    public function getWeather($postal_code, $country_code=NULL) {
         try {
-            $weather = $this->doGET("https://home.nest.com/api/0.1/weather/forecast/" . $postal_code);
+            $url = "https://home.nest.com/api/0.1/weather/forecast/$postal_code";
+            if (!empty($country_code)) {
+                $url .= ",$country_code";
+            }
+            $weather = $this->doGET($url);
         } catch (RuntimeException $ex) {
             // NESTAPI_ERROR_NOT_JSON_RESPONSE is kinda normal. The forecast API will often return a '502 Bad Gateway' response... meh.
             if ($ex->getCode() != NESTAPI_ERROR_NOT_JSON_RESPONSE) {
@@ -130,7 +134,7 @@ class Nest {
                 }
             }
 
-            $weather_data = $this->getWeather($structure->postal_code);
+            $weather_data = $this->getWeather($structure->postal_code, $structure->country_code);
             $user_structures[] = (object) array(
                 'name' => isset($structure->name)?$structure->name:'',
                 'address' => !empty($structure->street_address) ? $structure->street_address : NULL,
