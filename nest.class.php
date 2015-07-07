@@ -1,5 +1,7 @@
 <?php
 
+define('DATE_FORMAT','Y-m-d');
+define('DATETIME_FORMAT' DATE_FORMAT . ' H:i:s');
 define('TARGET_TEMP_MODE_COOL', 'cool');
 define('TARGET_TEMP_MODE_HEAT', 'heat');
 define('TARGET_TEMP_MODE_RANGE', 'range');
@@ -144,7 +146,7 @@ class Nest {
                 'outside_temperature' => $weather_data->outside_temperature,
                 'outside_humidity' => $weather_data->outside_humidity,
                 'away' => $structure->away,
-                'away_last_changed' => date('Y-m-d H:i:s', $structure->away_timestamp),
+                'away_last_changed' => date(DATETIME_FORMAT, $structure->away_timestamp),
                 'thermostats' => array_map(array($class_name, 'cleanDevices'), $structure->devices),
                 'protects' => $protects,
             );
@@ -219,9 +221,9 @@ class Nest {
                     'line_power_present' => $protect->line_power_present,
                     'battery_level' => $protect->battery_level,
                     'battery_health_state' => $protect->battery_health_state == 0 ? "OK" : $protect->battery_health_state,
-                    'replace_by_date' => date('Y-m-d', $protect->replace_by_date_utc_secs),
-                    'last_update' => date('Y-m-d H:i:s', $protect->{'$timestamp'}/1000),
-                    'last_manual_test' => $protect->latest_manual_test_start_utc_secs == 0 ? NULL : date('Y-m-d H:i:s', $protect->latest_manual_test_start_utc_secs),
+                    'replace_by_date' => date(DATE_FORMAT, $protect->replace_by_date_utc_secs),
+                    'last_update' => date(DATETIME_FORMAT, $protect->{'$timestamp'}/1000),
+                    'last_manual_test' => $protect->latest_manual_test_start_utc_secs == 0 ? NULL : date(DATETIME_FORMAT, $protect->latest_manual_test_start_utc_secs),
                     'tests_passed' => array(
                         'led'   => $protect->component_led_test_passed,
                         'pir'   => $protect->component_pir_test_passed,
@@ -239,7 +241,7 @@ class Nest {
                         'night_light'        => !empty($protect->night_light_enable) ? $protect->night_light_enable : 0,
                         'auto_away'          => !empty($protect->auto_away) ? $protect->auto_away : 0,
                         'heads_up'           => !empty($protect->heads_up_enable) ? $protect->heads_up_enable : 0,
-                        'steam_dectection'   => !empty($protect->steam_detection_enable) ? $protect->steam_detection_enable : 0,
+                        'steam_detection'   => !empty($protect->steam_detection_enable) ? $protect->steam_detection_enable : 0,
                     ),
                     'serial_number' => $protect->serial_number,
                     'location' => $protect->structure_id,
@@ -562,8 +564,8 @@ class Nest {
         $connection_info = $this->last_status->track->{$serial_number};
         return (object) array(
             'online' => $connection_info->online,
-            'last_connection' => date('Y-m-d H:i:s', $connection_info->last_connection/1000),
-            'last_connection_UTC' => gmdate("Y-m-d H:i:s", $connection_info->last_connection/1000),
+            'last_connection' => date(DATETIME_FORMAT, $connection_info->last_connection/1000),
+            'last_connection_UTC' => gmdate(DATETIME_FORMAT, $connection_info->last_connection/1000),
             'wan_ip' => @$connection_info->last_ip,
             'local_ip' => $this->last_status->device->{$serial_number}->local_ip,
             'mac_address' => $this->last_status->device->{$serial_number}->mac_address
