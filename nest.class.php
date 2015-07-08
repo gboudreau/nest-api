@@ -1,7 +1,7 @@
 <?php
 
 define('DATE_FORMAT','Y-m-d');
-define('DATETIME_FORMAT' DATE_FORMAT . ' H:i:s');
+define('DATETIME_FORMAT', DATE_FORMAT . ' H:i:s');
 define('TARGET_TEMP_MODE_COOL', 'cool');
 define('TARGET_TEMP_MODE_HEAT', 'heat');
 define('TARGET_TEMP_MODE_RANGE', 'range');
