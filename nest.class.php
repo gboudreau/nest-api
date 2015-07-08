@@ -295,8 +295,8 @@ class Nest {
             'location' => $structure,
             'network' => $this->getDeviceNetworkInfo($serial_number),
             'name' => !empty($this->last_status->shared->{$serial_number}->name) ? $this->last_status->shared->{$serial_number}->name : DEVICE_WITH_NO_NAME,
-            'auto_cool' => ceil($this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->leaf_threshold_cool)),
-            'auto_heat' => floor($this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->leaf_threshold_heat)),
+            'auto_cool' => ((int) $this->last_status->device->{$serial_number}->leaf_threshold_cool === 0) ? false : ceil($this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->leaf_threshold_cool)),
+            'auto_heat' => ((int) $this->last_status->device->{$serial_number}->leaf_threshold_heat === 1000) ? false : floor($this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->leaf_threshold_heat)),
             'where' => isset($this->last_status->device->{$serial_number}->where_id) ? isset($this->where_map[$this->last_status->device->{$serial_number}->where_id]) ? $this->where_map[$this->last_status->device->{$serial_number}->where_id] : $this->last_status->device->{$serial_number}->where_id : ""
         );
         if($this->last_status->device->{$serial_number}->has_humidifier) {
