@@ -212,7 +212,7 @@ class Nest {
                 // The specified device is a Nest Protect
                 $infos = (object) array(
                     'co_status' => $protect->co_status == 0 ? "OK" : $protect->co_status,
-                    'co_previous_peak' => $protect->co_previous_peak,
+                    'co_previous_peak' => isset($protect->co_previous_peak) ? $protect->co_previous_peak : false,
                     'co_sequence_number' => $protect->co_sequence_number,
                     'smoke_status' => $protect->smoke_status == 0 ? "OK" : $protect->smoke_status,
                     'smoke_sequence_number' => $protect->smoke_sequence_number,
