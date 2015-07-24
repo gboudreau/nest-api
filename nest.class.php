@@ -221,12 +221,12 @@ class Nest {
                     'line_power_present' => $protect->line_power_present,
                     'battery_level' => $protect->battery_level,
                     'battery_health_state' => $protect->battery_health_state == 0 ? "OK" : $protect->battery_health_state,
-                    'wired_or_battery' => !isset($protect->wired_or_battery) ? $protect->wired_or_battery : null,
-                    'born_on_date' => !isset($protect->device_born_on_date_utc_secs) ? date(DATE_FORMAT, $protect->device_born_on_date_utc_secs) : null,
+                    'wired_or_battery' => isset($protect->wired_or_battery) ? $protect->wired_or_battery : null,
+                    'born_on_date' => isset($protect->device_born_on_date_utc_secs) ? date(DATE_FORMAT, $protect->device_born_on_date_utc_secs) : null,
                     'replace_by_date' => date(DATE_FORMAT, $protect->replace_by_date_utc_secs),
                     'last_update' => date(DATETIME_FORMAT, $protect->{'$timestamp'}/1000),
                     'last_manual_test' => $protect->latest_manual_test_start_utc_secs == 0 ? NULL : date(DATETIME_FORMAT, $protect->latest_manual_test_start_utc_secs),
-                    'ntp_green_led_brightness' => !isset($protect->ntp_green_led_brightness) ? $protect->ntp_green_led_brightness : null,
+                    'ntp_green_led_brightness' => isset($protect->ntp_green_led_brightness) ? $protect->ntp_green_led_brightness : null,
                     'tests_passed' => array(
                         'led'       => $protect->component_led_test_passed,
                         'pir'       => $protect->component_pir_test_passed,
@@ -238,8 +238,8 @@ class Nest {
                         'co'        => $protect->component_co_test_passed,
                         'us'        => $protect->component_us_test_passed,
                         'hum'       => $protect->component_hum_test_passed,
-                        'speaker'   => !isset($protect->component_speaker_test_passed) ? $protect->component_speaker_test_passed : null,
-                        'buzzer'    => !isset($protect->component_buzzer_test_passed) ? $protect->component_buzzer_test_passed : null,                        
+                        'speaker'   => isset($protect->component_speaker_test_passed) ? $protect->component_speaker_test_passed : null,
+                        'buzzer'    => isset($protect->component_buzzer_test_passed) ? $protect->component_buzzer_test_passed : null,                        
                     ),
                     'nest_features' => array(
                         'night_time_promise' => !empty($protect->ntp_green_led_enable) ? $protect->ntp_green_led_enable : 0,
@@ -259,7 +259,7 @@ class Nest {
                     ),
                     'name' => !empty($protect->description) ? $protect->description : DEVICE_WITH_NO_NAME,
                     'where' => isset($this->where_map[$protect->spoken_where_id]) ? $this->where_map[$protect->spoken_where_id] : $protect->spoken_where_id,
-                    'color' => !isset($protect->device_external_color) ? $protect->device_external_color : null,                    
+                    'color' => isset($protect->device_external_color) ? $protect->device_external_color : null,                    
                 );
                 return $infos;
             }
