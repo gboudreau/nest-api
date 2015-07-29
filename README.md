@@ -1,7 +1,10 @@
-Nest Learning Thermostat API
-============================
+Unofficial Nest Learning Thermostat API
+=======================================
 
 This is a PHP class that will allow you to monitor and control your [Nest Learning Thermostat](http://www.nest.com/), and Nest Protect.
+
+__Note that since I started this, Nest have started an official [Developer program](https://developer.nest.com/). You might be better served using the official APIs, versus this PHP class here in which you need to store your credentials in plain text, and which use the non-supported APIs used by the mobile & web apps.  
+i.e. if you're building a serious commercial application, go sign-up into Nest's Developer program. If you just want to build something for yourself, then you're probably fine with this PHP class here.__
 
 Features
 --------
