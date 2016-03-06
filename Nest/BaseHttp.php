@@ -79,7 +79,7 @@ class BaseHttp {
         // Update cacert.pem (valid CA certificates list) from the cURL website once a month
         $last_month = time()-30*24*60*60;
         if (!file_exists($this->certificateAuthorityInfo) || filemtime($this->certificateAuthorityInfo) < $last_month || filesize($this->certificateAuthorityInfo) < 100000) {
-            file_put_contents($this->certificateAuthorityInfo, file_get_contents('http://curl.haxx.se/ca/cacert.pem'));
+            file_put_contents($this->certificateAuthorityInfo, file_get_contents('https://curl.haxx.se/ca/cacert.pem'));
         }
     }
 }
