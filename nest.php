@@ -5,8 +5,6 @@ require_once 'Nest/Constants.php';
 use Nest\Http as Http;
 use Nest\Authentication as Authentication;
 
-define('DEBUG', FALSE);
-
 class Nest {
 	private $auth;
 	private $http;
