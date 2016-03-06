@@ -6,8 +6,8 @@ use Nest\Http as Http;
 use Nest\Authentication as Authentication;
 
 class Nest {
-	private $auth;
-	private $http;
+    private $auth;
+    private $http;
     private $days_maps = array('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun');
 
     private $where_map = array(
@@ -41,8 +41,8 @@ class Nest {
     private $last_status;
     
     function __construct($username=null, $password=null) {
-    	$this->auth = new Authentication($username,$password);
-    	$this->http = new Http($this->auth);
+        $this->auth = new Authentication($username,$password);
+        $this->http = new Http($this->auth);
         
         $this->auth->login();
     }
