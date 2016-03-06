@@ -701,7 +701,7 @@ class Nest {
         $curl_cainfo = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cacert.pem';
         $last_month = time()-30*24*60*60;
         if (!file_exists($curl_cainfo) || filemtime($curl_cainfo) < $last_month || filesize($curl_cainfo) < 100000) {
-            file_put_contents($curl_cainfo, file_get_contents('http://curl.haxx.se/ca/cacert.pem'));
+            file_put_contents($curl_cainfo, file_get_contents('https://curl.haxx.se/ca/cacert.pem'));
         }
         if (file_exists($curl_cainfo) && filesize($curl_cainfo) > 100000) {
             curl_setopt($ch, CURLOPT_CAINFO, $curl_cainfo);
