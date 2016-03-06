@@ -63,7 +63,7 @@ class BaseHttp {
         curl_setopt($this->ch, CURLOPT_SSL_VERIFYHOST, 2);    // for security this should always be set to 2.
         curl_setopt($this->ch, CURLOPT_SSLVERSION, 1);        // Nest servers now require TLSv1; won't work with SSLv2 or even SSLv3!
 
-        if (file_exists($this->certificateAuthorityInfo) && filesize($curl_cainfo) > 100000) {
+        if (file_exists($this->certificateAuthorityInfo) && filesize($this->certificateAuthorityInfo) > 100000) {
             curl_setopt($this->ch, CURLOPT_CAINFO, $this->certificateAuthorityInfo);
         }
         $response = curl_exec($this->ch);
@@ -78,7 +78,7 @@ class BaseHttp {
     private function updateCAInfo(){
         // Update cacert.pem (valid CA certificates list) from the cURL website once a month
         $last_month = time()-30*24*60*60;
-        if (!file_exists($this->certificateAuthorityInfo) || filemtime($this->certificateAuthorityInfo) < $last_month || filesize($curl_cainfo) < 100000) {
+        if (!file_exists($this->certificateAuthorityInfo) || filemtime($this->certificateAuthorityInfo) < $last_month || filesize($this->certificateAuthorityInfo) < 100000) {
             file_put_contents($this->certificateAuthorityInfo, file_get_contents('http://curl.haxx.se/ca/cacert.pem'));
         }
     }
