@@ -1,6 +1,6 @@
 <?php
 
-require_once 'Nest\Constants.php';
+require_once 'Nest/Constants.php';
 
 use Nest\Http as Http;
 use Nest\Authentication as Authentication;
