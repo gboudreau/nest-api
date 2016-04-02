@@ -4,6 +4,9 @@ namespace Nest;
 class Authentication{
     const login_url = 'https://home.nest.com/user/login';
 
+    private $username;
+    private $password;
+
     private $transport_url;
     private $access_token;
     private $user;
@@ -19,16 +22,16 @@ class Authentication{
         if ($password === null && defined('PASSWORD')) {
             $password = PASSWORD;
         }
-        if ($username === null || $password === null) {
-            throw new InvalidArgumentException('Nest credentials were not provided.');
-        }
+
         $this->username = $username;
         $this->password = $password;
 
-        $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . md5($username . $password);
+        $fileId = md5($username);
+
+        $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . $fileId;
         static::secure_touch($this->cookie_file);
 
-        $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . md5($username . $password);
+        $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . $fileId;
         
         // Attempt to load the cache
         $this->loadCache();
@@ -42,6 +45,10 @@ class Authentication{
         if ($this->use_cache()) {
             // No need to login; we'll use cached values for authentication.
             return;
+        }
+
+        if ($this->username === null || $this->password === null) {
+            throw new \InvalidArgumentException('Nest credentials were not provided.');
         }
 
         $httpRequest = new BaseHttp();
