@@ -8,17 +8,17 @@ class BaseHttp {
     protected $ch;
     protected $user_agent;
 
-    public function __construct($value=''){
+    public function __construct(){
         $this->certificateAuthorityInfo = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cacert.pem';
         $this->updateCAInfo();
         $this->ch = curl_init();
     }
 
-        private function GET($url) {
+    public function GET($url) {
         return $this->request('GET', $url);
     }
 
-    private function POST($url, $data_fields) {
+    public function POST($url, $data_fields) {
         return $this->request('POST', $url, $data_fields);
     }
 
@@ -34,7 +34,7 @@ class BaseHttp {
         $this->user_agent = $user_agent;
     }
 
-    private function request($method, $url, $data_fields=null, $with_retry=TRUE) {
+    protected function request($method, $url, $data_fields=null) {
         if (is_array($data_fields)) {
             $data = array();
             foreach($data_fields as $k => $v) {
@@ -68,7 +68,6 @@ class BaseHttp {
         }
         $response = curl_exec($this->ch);
         $info = curl_getinfo($this->ch);
-
         return array(
             'response' => $response,
             'info' => $info
