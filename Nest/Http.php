@@ -50,7 +50,7 @@ class Http extends BaseHttp {
         }
 
         $json = json_decode($response['response']);
-        if (!is_object($json) && ($method == 'GET' || $url == $this->auth->login_url)) {
+        if (!is_object($json) && ($method == 'GET' || $url == Auth::login_url)) {
             if (strpos($response['response'], "currently performing maintenance on your Nest account") !== FALSE) {
                 throw new RuntimeException("Error: Account is under maintenance; API temporarily unavailable.", NESTAPI_ERROR_UNDER_MAINTENANCE);
             }
