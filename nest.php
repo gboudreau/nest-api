@@ -31,14 +31,14 @@ class Nest {
     );
 
     private $last_status;
-    
+
     function __construct($username=null, $password=null) {
         $this->auth = new Authentication($username,$password);
         $this->http = new Http($this->auth);
-        
+
         $this->auth->login();
     }
-    
+
     /* Getters and setters */
 
     public function getWeather($postal_code, $country_code=NULL) {
@@ -116,16 +116,16 @@ class Nest {
                 $schedule[(int) $day] = array_values($events);
             }
         }
-        
+
         ksort($schedule);
         $sorted_schedule = array();
         foreach ($schedule as $day => $events) {
             $sorted_schedule[$this->days_maps[(int) $day]] = $events;
         }
-        
+
         return $sorted_schedule;
     }
-    
+
     public function getNextScheduledEvent($serial_number=null) {
         $schedule = $this->getDeviceSchedule($serial_number);
         $next_event = FALSE;
@@ -179,7 +179,7 @@ class Nest {
                         'us'        => $protect->component_us_test_passed,
                         'hum'       => $protect->component_hum_test_passed,
                         'speaker'   => isset($protect->component_speaker_test_passed) ? $protect->component_speaker_test_passed : null,
-                        'buzzer'    => isset($protect->component_buzzer_test_passed) ? $protect->component_buzzer_test_passed : null,                        
+                        'buzzer'    => isset($protect->component_buzzer_test_passed) ? $protect->component_buzzer_test_passed : null,
                     ),
                     'nest_features' => array(
                         'night_time_promise' => !empty($protect->ntp_green_led_enable) ? $protect->ntp_green_led_enable : 0,
@@ -188,7 +188,7 @@ class Nest {
                         'heads_up'           => !empty($protect->heads_up_enable) ? $protect->heads_up_enable : 0,
                         'steam_detection'    => !empty($protect->steam_detection_enable) ? $protect->steam_detection_enable : 0,
                         'home_alarm_link'    => !empty($protect->home_alarm_link_capable) ? $protect->home_alarm_link_capable : 0,
-                        'wired_led_enable'   => !empty($protect->wired_led_enable) ? $protect->wired_led_enable : 0,                        
+                        'wired_led_enable'   => !empty($protect->wired_led_enable) ? $protect->wired_led_enable : 0,
                     ),
                     'serial_number' => $protect->serial_number,
                     'location' => $protect->structure_id,
@@ -199,7 +199,7 @@ class Nest {
                     ),
                     'name' => !empty($protect->description) ? $protect->description : DEVICE_WITH_NO_NAME,
                     'where' => isset($this->where_map[$protect->spoken_where_id]) ? $this->where_map[$protect->spoken_where_id] : $protect->spoken_where_id,
-                    'color' => isset($protect->device_external_color) ? $protect->device_external_color : null,                    
+                    'color' => isset($protect->device_external_color) ? $protect->device_external_color : null,
                 );
                 return $infos;
             }
@@ -255,7 +255,7 @@ class Nest {
 
         return $infos;
     }
-  
+
     public function getEnergyLatest($serial_number=null) {
         $serial_number = $this->getDefaultSerial($serial_number);
 
@@ -266,7 +266,7 @@ class Nest {
         );
 
         $url = '/v5/subscribe';
-    
+
         return $this->http->POST($url, json_encode($payload));
     }
 
@@ -303,7 +303,7 @@ class Nest {
         $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature' => $temperature));
         return $this->http->POST("/v2/put/shared." . $serial_number, $data);
     }
-    
+
     public function setTargetTemperatures($temp_low, $temp_high, $serial_number=null) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $temp_low = $this->temperatureInCelsius($temp_low, $serial_number);
@@ -390,7 +390,7 @@ class Nest {
         $structure_id = $this->getDeviceInfo($serial_number)->location;
         return $this->http->POST("/v2/put/structure." . $structure_id, $data);
     }
-    
+
     public function setAutoAwayEnabled($enabled, $serial_number=null) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $data = json_encode(array('auto_away_enable' => $enabled));

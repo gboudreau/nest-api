@@ -37,7 +37,7 @@ class Authentication{
         $this->login();
     }
 
-    private function login() {
+    public function login() {
         if ($this->loadCache()) {
             // No need to login; we'll use cached values for authentication.
             static::secure_touch($this->cache_file);
@@ -84,7 +84,7 @@ class Authentication{
         return $this->userid;
     }
 
-    private function loadCache() {
+    public function loadCache() {
         $cacheIsValid = false;
         if (!file_exists($this->cache_file) && !file_exists($this->cookie_file)) {
             return $cacheIsValid;
@@ -105,7 +105,7 @@ class Authentication{
         return $cacheIsValid;
     }
 
-    private function saveCache() {
+    public function saveCache() {
         $vars = array(
             'transport_url' => $this->transport_url,
             'access_token' => $this->access_token,
