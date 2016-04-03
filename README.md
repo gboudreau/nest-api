@@ -38,18 +38,17 @@ Features
 Usage
 -----
 
-You can just download nest.class.php and require/include it, or use composer: `require "gboudreau/nest-api": "dev-master"`.
+You can just download repository, and use autoload.php to include it, or use composer: `require "gboudreau/nest-api": "dev-master"`.
 
 See examples.php for details, but here's a Quick Start.
 
 ```php
 <?php
-
-require_once('nest.class.php');
-
 // Your Nest username and password.
-define('USERNAME', 'you@gmail.com');
-define('PASSWORD', 'Something other than 1234 right?');
+define('NEST_USERNAME', 'you@gmail.com');
+define('NEST_PASSWORD', 'Something other than 1234 right?');
+
+require_once 'autoload.php'; // Or use composer
 
 $nest = new Nest();
 
@@ -61,7 +60,7 @@ print_r($infos);
 printf("Current temperature: %.02f degrees %s\n", $infos->current_state->temperature, $infos->scale);
 
 // Cool to 23
-$nest->setTargetTemperatureMode(TARGET_TEMP_MODE_COOL, 23.0);
+$nest->setTargetTemperatureMode(Nest::TARGET_TEMP_MODE_COOL, 23.0);
     
 // Set Away mode
 $nest->setAway(TRUE);

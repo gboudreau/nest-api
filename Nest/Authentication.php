@@ -1,8 +1,9 @@
 <?php
 namespace Nest;
 
-class Authentication{
-    const login_url = 'https://home.nest.com/user/login';
+class Authentication
+{
+    const LOGIN_URL = 'https://home.nest.com/user/login';
 
     private $username;
     private $password;
@@ -15,12 +16,12 @@ class Authentication{
     private $cache_file;
     private $cache_expiration;
 
-    function __construct($username=null, $password=null) {
-        if ($username === null && defined('USERNAME')) {
-            $username = USERNAME;
+    public function __construct($username = NULL, $password = NULL) {
+        if ($username === NULL && defined('NEST_USERNAME')) {
+            $username = NEST_USERNAME;
         }
-        if ($password === null && defined('PASSWORD')) {
-            $password = PASSWORD;
+        if ($password === NULL && defined('NEST_PASSWORD')) {
+            $password = NEST_PASSWORD;
         }
 
         $this->username = $username;
@@ -29,7 +30,7 @@ class Authentication{
         $fileId = md5($username);
 
         $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . $fileId;
-        static::secure_touch($this->cookie_file);
+        static::_secureTouch($this->cookie_file);
 
         $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . $fileId;
 
@@ -40,17 +41,17 @@ class Authentication{
     public function login() {
         if ($this->loadCache()) {
             // No need to login; we'll use cached values for authentication.
-            static::secure_touch($this->cache_file);
+            static::_secureTouch($this->cache_file);
             return;
         }
 
-        if ($this->username === null || $this->password === null) {
+        if ($this->username === NULL || $this->password === NULL) {
             throw new \InvalidArgumentException('Nest credentials were not provided.');
         }
 
         $httpRequest = new BaseHttp();
 
-        $httpResponse = $httpRequest->POST(self::login_url, array('username' => $this->username, 'password' => $this->password));
+        $httpResponse = $httpRequest->POST(static::LOGIN_URL, array('username' => $this->username, 'password' => $this->password));
 
         $result = json_decode($httpResponse['response']);
         if (!isset($result->urls)) {
@@ -64,33 +65,33 @@ class Authentication{
         $this->saveCache();
     }
 
-    public function getAccessToken(){
+    public function getAccessToken() {
         return $this->access_token;
     }
 
-    public function getCookieFile(){
+    public function getCookieFile() {
         return $this->cookie_file;
     }
 
-    public function getTransportUrl(){
+    public function getTransportUrl() {
         return $this->transport_url;
     }
 
-    public function getUser(){
+    public function getUser() {
         return $this->user;
     }
 
-    public function getUserId(){
+    public function getUserId() {
         return $this->userid;
     }
 
     public function loadCache() {
-        $cacheIsValid = false;
+        $cacheIsValid = FALSE;
         if (!file_exists($this->cache_file) && !file_exists($this->cookie_file)) {
             return $cacheIsValid;
         }
         $vars = @unserialize(file_get_contents($this->cache_file));
-        if ($vars === false) {
+        if ($vars === FALSE) {
             return $cacheIsValid;
         }
         $this->transport_url = $vars['transport_url'];
@@ -98,7 +99,6 @@ class Authentication{
         $this->user = $vars['user'];
         $this->userid = $vars['userid'];
         $this->cache_expiration = $vars['cache_expiration'];
-        $this->last_status = $vars['last_status'];
 
         $cacheIsValid = $this->cache_expiration > time();
 
@@ -112,12 +112,16 @@ class Authentication{
             'user' => $this->user,
             'userid' => $this->userid,
             'cache_expiration' => $this->cache_expiration,
-            'last_status' => @$this->last_status
         );
         file_put_contents($this->cache_file, serialize($vars));
     }
 
-    private static function secure_touch($fname) {
+    public function logout() {
+        @unlink($this->getCookieFile());
+        @unlink($this->cache_file);
+    }
+
+    private static function _secureTouch($fname) {
         if (file_exists($fname)) {
             return;
         }
@@ -125,4 +129,3 @@ class Authentication{
         rename($temp, $fname);
     }
 }
-?>

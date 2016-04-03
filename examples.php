@@ -1,7 +1,5 @@
 <?php
 
-require_once('nest.class.php');
-
 // Your Nest username and password.
 $username = 'you@gmail.com';
 $password = 'Something other than 1234 right?';
@@ -11,6 +9,10 @@ $password = 'Something other than 1234 right?';
 date_default_timezone_set('America/Montreal');
 
 // Here's how to use this class:
+
+require_once 'autoload.php'; // Or use composer
+
+use Nest\Nest as Nest;
 
 $nest = new Nest($username, $password);
 
@@ -25,7 +27,7 @@ jlog($devices_serials);
 echo "----------\n\n";
 
 echo "Devices list (Nest Protect):\n";
-$protects_serials = $nest->getDevices(DEVICE_TYPE_PROTECT);
+$protects_serials = $nest->getDevices(Nest::DEVICE_TYPE_PROTECT);
 jlog($protects_serials);
 echo "----------\n\n";
 
@@ -48,20 +50,20 @@ $success = $nest->setTargetTemperatures(23.0, 26.0);
 var_dump($success);
 
 echo "Setting target temperature mode...\n";
-$success = $nest->setTargetTemperatureMode(TARGET_TEMP_MODE_COOL, 26.0); // Available: TARGET_TEMP_MODE_COOL, TARGET_TEMP_MODE_HEAT, TARGET_TEMP_MODE_RANGE
+$success = $nest->setTargetTemperatureMode(Nest::TARGET_TEMP_MODE_COOL, 26.0); // Available: TARGET_TEMP_MODE_COOL, TARGET_TEMP_MODE_HEAT, TARGET_TEMP_MODE_RANGE
 var_dump($success);
 
 echo "Setting target temperature mode (range)...\n";
-$success = $nest->setTargetTemperatureMode(TARGET_TEMP_MODE_RANGE, array(23.0, 26.0)); // Available: TARGET_TEMP_MODE_COOL, TARGET_TEMP_MODE_HEAT, TARGET_TEMP_MODE_RANGE
+$success = $nest->setTargetTemperatureMode(Nest::TARGET_TEMP_MODE_RANGE, array(23.0, 26.0)); // Available: TARGET_TEMP_MODE_COOL, TARGET_TEMP_MODE_HEAT, TARGET_TEMP_MODE_RANGE
 var_dump($success);
 
 echo "Setting fan mode...\n";
-$success = $nest->setFanMode(FAN_MODE_ON); // Available: FAN_MODE_AUTO or FAN_MODE_EVERY_DAY_OFF, FAN_MODE_ON or FAN_MODE_EVERY_DAY_ON
+$success = $nest->setFanMode(Nest::FAN_MODE_ON); // Available: FAN_MODE_AUTO or FAN_MODE_EVERY_DAY_OFF, FAN_MODE_ON or FAN_MODE_EVERY_DAY_ON
 // setFanMode() can also take an array as it's argument. See the comments below for examples (FAN_MODE_TIMER, FAN_MODE_MINUTES_PER_HOUR).
 var_dump($success);
 
 echo "Setting fan mode: on with timer (15 minutes)...\n";
-$success = $nest->setFanModeOnWithTimer(FAN_TIMER_15M); // Available: FAN_TIMER_15M, FAN_TIMER_30M, FAN_TIMER_45M, FAN_TIMER_1H, FAN_TIMER_2H, FAN_TIMER_4H, FAN_TIMER_8H, FAN_TIMER_12H
+$success = $nest->setFanModeOnWithTimer(Nest::FAN_TIMER_15M); // Available: FAN_TIMER_15M, FAN_TIMER_30M, FAN_TIMER_45M, FAN_TIMER_1H, FAN_TIMER_2H, FAN_TIMER_4H, FAN_TIMER_8H, FAN_TIMER_12H
 //$success = $nest->setFanMode(array(FAN_MODE_TIMER, 900)); // Same as above. See the FAN_TIMER_* defines for the possible values.
 var_dump($success);
 
@@ -70,7 +72,7 @@ $success = $nest->cancelFanModeOnWithTimer();
 var_dump($success);
 
 echo "Setting fan mode to 30 minutes per hour...\n";
-$success = $nest->setFanModeMinutesPerHour(FAN_MODE_MINUTES_PER_HOUR_30); // Available: FAN_MODE_MINUTES_PER_HOUR_15, FAN_MODE_MINUTES_PER_HOUR_30, FAN_MODE_MINUTES_PER_HOUR_45, FAN_MODE_MINUTES_PER_HOUR_ALWAYS_ON
+$success = $nest->setFanModeMinutesPerHour(Nest::FAN_MODE_MINUTES_PER_HOUR_30); // Available: FAN_MODE_MINUTES_PER_HOUR_15, FAN_MODE_MINUTES_PER_HOUR_30, FAN_MODE_MINUTES_PER_HOUR_45, FAN_MODE_MINUTES_PER_HOUR_ALWAYS_ON
 //$success = $nest->setFanMode(array(FAN_MODE_MINUTES_PER_HOUR, 1800)); // Same as above. See the FAN_MODE_MINUTES_PER_HOUR_* defines for the possible values.
 var_dump($success);
 
@@ -83,11 +85,11 @@ $success = $nest->turnOff();
 var_dump($success);
 
 echo "Setting away mode...\n";
-$success = $nest->setAway(AWAY_MODE_ON); // Available: AWAY_MODE_ON, AWAY_MODE_OFF
+$success = $nest->setAway(Nest::AWAY_MODE_ON); // Available: AWAY_MODE_ON, AWAY_MODE_OFF
 var_dump($success);
 
 echo "Enabling (Nest Sense) Auto-Away...\n";
-$success = $nest->setAutoAwayEnabled(true);
+$success = $nest->setAutoAwayEnabled(TRUE);
 var_dump($success);
 
 echo "Setting dual-fuel breakpoint (use alternative heat when the outdoor temperature is below -5°)...\n";
@@ -122,86 +124,9 @@ echo "----------\n\n";
 
 /* Helper functions */
 
-function json_format($json) { 
-    $tab = "  "; 
-    $new_json = ""; 
-    $indent_level = 0; 
-    $in_string = false; 
-
-    $json_obj = json_decode($json); 
-
-    if($json_obj === false) 
-        return false; 
-
-    $json = json_encode($json_obj); 
-    $len = strlen($json); 
-
-    for($c = 0; $c < $len; $c++) 
-    { 
-        $char = $json[$c]; 
-        switch($char) 
-        { 
-            case '{': 
-            case '[': 
-                if(!$in_string) 
-                { 
-                    $new_json .= $char . "\n" . str_repeat($tab, $indent_level+1); 
-                    $indent_level++; 
-                } 
-                else 
-                { 
-                    $new_json .= $char; 
-                } 
-                break; 
-            case '}': 
-            case ']': 
-                if(!$in_string) 
-                { 
-                    $indent_level--; 
-                    $new_json .= "\n" . str_repeat($tab, $indent_level) . $char; 
-                } 
-                else 
-                { 
-                    $new_json .= $char; 
-                } 
-                break; 
-            case ',': 
-                if(!$in_string) 
-                { 
-                    $new_json .= ",\n" . str_repeat($tab, $indent_level); 
-                } 
-                else 
-                { 
-                    $new_json .= $char; 
-                } 
-                break; 
-            case ':': 
-                if(!$in_string) 
-                { 
-                    $new_json .= ": "; 
-                } 
-                else 
-                { 
-                    $new_json .= $char; 
-                } 
-                break; 
-            case '"': 
-                if($c > 0 && $json[$c-1] != '\\') 
-                { 
-                    $in_string = !$in_string; 
-                } 
-            default: 
-                $new_json .= $char; 
-                break;                    
-        } 
-    } 
-
-    return $new_json; 
-}
-
 function jlog($json) {
     if (!is_string($json)) {
-        $json = json_encode($json);
+        $json = json_encode($json, JSON_PRETTY_PRINT);
     }
-    echo json_format($json) . "\n";
+    echo $json . "\n";
 }

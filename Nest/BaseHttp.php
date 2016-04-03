@@ -1,16 +1,17 @@
 <?php
 namespace Nest;
 
-class BaseHttp {
+class BaseHttp
+{
     private $headers = array();
     private $certificateAuthorityInfo;
     protected $cookie_file;
     protected $ch;
     protected $user_agent;
 
-    public function __construct(){
+    public function __construct() {
         $this->certificateAuthorityInfo = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cacert.pem';
-        $this->updateCAInfo();
+        $this->_updateCAInfo();
         $this->ch = curl_init();
     }
 
@@ -22,27 +23,29 @@ class BaseHttp {
         return $this->request('POST', $url, $data_fields);
     }
 
-    public function addHeader($header, $value){
+    public function addHeader($header, $value) {
         $this->headers[] = $header . ': ' . $value;
     }
 
-    public function setCookieFile($cookie_file){
-        $this->cookieFile = $cookie_file;
+    public function setCookieFile($cookie_file) {
+        $this->cookie_file = $cookie_file;
     }
 
-    public function setUserAgent($user_agent){
+    public function setUserAgent($user_agent) {
         $this->user_agent = $user_agent;
     }
 
-    protected function request($method, $url, $data_fields=null) {
+    protected function request($method, $url, $data_fields = NULL) {
         if (is_array($data_fields)) {
             $data = array();
-            foreach($data_fields as $k => $v) {
+            foreach ($data_fields as $k => $v) {
                 $data[] = "$k=" . urlencode($v);
             }
             $data = implode('&', $data);
-        } else if (is_string($data_fields)) {
+        } elseif (is_string($data_fields)) {
             $data = $data_fields;
+        } else {
+            $data = NULL;
         }
         curl_setopt($this->ch, CURLOPT_URL, $url);
         curl_setopt($this->ch, CURLOPT_CUSTOMREQUEST, $method);
@@ -74,7 +77,7 @@ class BaseHttp {
         );
     }
 
-    private function updateCAInfo(){
+    private function _updateCAInfo() {
         // Update cacert.pem (valid CA certificates list) from the cURL website once a month
         $last_month = time()-30*24*60*60;
         if (!file_exists($this->certificateAuthorityInfo) || filemtime($this->certificateAuthorityInfo) < $last_month || filesize($this->certificateAuthorityInfo) < 100000) {
@@ -82,5 +85,3 @@ class BaseHttp {
         }
     }
 }
-
-?>
