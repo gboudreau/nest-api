@@ -2,6 +2,7 @@
 namespace Nest;
 
 use Nest\Authentication as Auth;
+use Nest\Constants as CON;
 
 class Http extends BaseHttp {
     const user_agent = 'Nest/2.1.3 CFNetwork/548.0.4';
@@ -52,19 +53,19 @@ class Http extends BaseHttp {
         $json = json_decode($response['response']);
         if (!is_object($json) && ($method == 'GET' || $url == Auth::login_url)) {
             if (strpos($response['response'], "currently performing maintenance on your Nest account") !== FALSE) {
-                throw new RuntimeException("Error: Account is under maintenance; API temporarily unavailable.", NESTAPI_ERROR_UNDER_MAINTENANCE);
+                throw new RuntimeException("Error: Account is under maintenance; API temporarily unavailable.", CON::NESTAPI_ERROR_UNDER_MAINTENANCE);
             }
             if (empty($response['response'])) {
-                throw new RuntimeException("Error: Received empty response from request to $url.", NESTAPI_ERROR_EMPTY_RESPONSE);
+                throw new RuntimeException("Error: Received empty response from request to $url.", CON::NESTAPI_ERROR_EMPTY_RESPONSE);
             }
-            throw new RuntimeException("Error: Response from request to $url is not valid JSON data. Response: " . str_replace(array("\n","\r"), '', $response['response']), NESTAPI_ERROR_NOT_JSON_RESPONSE);
+            throw new RuntimeException("Error: Response from request to $url is not valid JSON data. Response: " . str_replace(array("\n","\r"), '', $response['response']), CON::NESTAPI_ERROR_NOT_JSON_RESPONSE);
         }
 
         if ($response['info']['http_code'] == 400) {
             if (!is_object($json)) {
-                throw new RuntimeException("Error: HTTP 400 from request to $url. Response: " . str_replace(array("\n","\r"), '', $response['response']), NESTAPI_ERROR_API_OTHER_ERROR);
+                throw new RuntimeException("Error: HTTP 400 from request to $url. Response: " . str_replace(array("\n","\r"), '', $response['response']), CON::NESTAPI_ERROR_API_OTHER_ERROR);
             }
-            throw new RuntimeException("Error: HTTP 400 from request to $url. JSON error: $json->error - $json->error_description", NESTAPI_ERROR_API_JSON_ERROR);
+            throw new RuntimeException("Error: HTTP 400 from request to $url. JSON error: $json->error - $json->error_description", CON::NESTAPI_ERROR_API_JSON_ERROR);
         }
 
         // No body returned; return a boolean value that confirms a 200 OK was returned.

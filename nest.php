@@ -1,9 +1,8 @@
 <?php
 
-require_once 'Nest/Constants.php';
-
 use Nest\Http as Http;
 use Nest\Authentication as Authentication;
+use Nest\Constants as CON;
 
 class Nest {
     private $auth;
@@ -86,7 +85,7 @@ class Nest {
                 'outside_temperature' => $weather_data->outside_temperature,
                 'outside_humidity' => $weather_data->outside_humidity,
                 'away' => $structure->away,
-                'away_last_changed' => date(DATETIME_FORMAT, $structure->away_timestamp),
+                'away_last_changed' => date(CON::DATETIME_FORMAT, $structure->away_timestamp),
                 'thermostats' => array_map(array($class_name, 'cleanDevices'), $structure->devices),
                 'protects' => $protects,
             );
@@ -107,7 +106,7 @@ class Nest {
                     $events[(int)$scheduled_event->time] = (object) array(
                        'time' => $scheduled_event->time/60, // in minutes
                        'target_temperature' => $scheduled_event->type == 'RANGE' ? array($this->temperatureInUserScale((float)$scheduled_event->{'temp-min'}), $this->temperatureInUserScale((float)$scheduled_event->{'temp-max'})) : $this->temperatureInUserScale((float) $scheduled_event->temp),
-                       'mode' => $scheduled_event->type == 'HEAT' ? TARGET_TEMP_MODE_HEAT : ($scheduled_event->type == 'COOL' ? TARGET_TEMP_MODE_COOL : TARGET_TEMP_MODE_RANGE)
+                       'mode' => $scheduled_event->type == 'HEAT' ? CON::TARGET_TEMP_MODE_HEAT : ($scheduled_event->type == 'COOL' ? CON::TARGET_TEMP_MODE_COOL : CON::TARGET_TEMP_MODE_RANGE)
                     );
                 }
             }
@@ -162,10 +161,10 @@ class Nest {
                     'battery_level' => $protect->battery_level,
                     'battery_health_state' => $protect->battery_health_state == 0 ? "OK" : $protect->battery_health_state,
                     'wired_or_battery' => isset($protect->wired_or_battery) ? $protect->wired_or_battery : null,
-                    'born_on_date' => isset($protect->device_born_on_date_utc_secs) ? date(DATE_FORMAT, $protect->device_born_on_date_utc_secs) : null,
-                    'replace_by_date' => date(DATE_FORMAT, $protect->replace_by_date_utc_secs),
-                    'last_update' => date(DATETIME_FORMAT, $protect->{'$timestamp'}/1000),
-                    'last_manual_test' => $protect->latest_manual_test_start_utc_secs == 0 ? NULL : date(DATETIME_FORMAT, $protect->latest_manual_test_start_utc_secs),
+                    'born_on_date' => isset($protect->device_born_on_date_utc_secs) ? date(CON::DATE_FORMAT, $protect->device_born_on_date_utc_secs) : null,
+                    'replace_by_date' => date(CON::DATE_FORMAT, $protect->replace_by_date_utc_secs),
+                    'last_update' => date(CON::DATETIME_FORMAT, $protect->{'$timestamp'}/1000),
+                    'last_manual_test' => $protect->latest_manual_test_start_utc_secs == 0 ? NULL : date(CON::DATETIME_FORMAT, $protect->latest_manual_test_start_utc_secs),
                     'ntp_green_led_brightness' => isset($protect->ntp_green_led_brightness) ? $protect->ntp_green_led_brightness : null,
                     'tests_passed' => array(
                         'led'       => $protect->component_led_test_passed,
@@ -197,7 +196,7 @@ class Nest {
                         'local_ip' => $protect->wifi_ip_address,
                         'mac_address' => $protect->wifi_mac_address
                     ),
-                    'name' => !empty($protect->description) ? $protect->description : DEVICE_WITH_NO_NAME,
+                    'name' => !empty($protect->description) ? $protect->description : CON::DEVICE_WITH_NO_NAME,
                     'where' => isset($this->where_map[$protect->spoken_where_id]) ? $this->where_map[$protect->spoken_where_id] : $protect->spoken_where_id,
                     'color' => isset($protect->device_external_color) ? $protect->device_external_color : null,
                 );
@@ -242,7 +241,7 @@ class Nest {
             'scale' => $this->last_status->device->{$serial_number}->temperature_scale,
             'location' => $structure,
             'network' => $this->getDeviceNetworkInfo($serial_number),
-            'name' => !empty($this->last_status->shared->{$serial_number}->name) ? $this->last_status->shared->{$serial_number}->name : DEVICE_WITH_NO_NAME,
+            'name' => !empty($this->last_status->shared->{$serial_number}->name) ? $this->last_status->shared->{$serial_number}->name : CON::DEVICE_WITH_NO_NAME,
             'auto_cool' => ((int) $this->last_status->device->{$serial_number}->leaf_threshold_cool === 0) ? false : ceil($this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->leaf_threshold_cool)),
             'auto_heat' => ((int) $this->last_status->device->{$serial_number}->leaf_threshold_heat === 1000) ? false : floor($this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->leaf_threshold_heat)),
             'where' => isset($this->last_status->device->{$serial_number}->where_id) ? isset($this->where_map[$this->last_status->device->{$serial_number}->where_id]) ? $this->where_map[$this->last_status->device->{$serial_number}->where_id] : $this->last_status->device->{$serial_number}->where_id : ""
@@ -273,19 +272,19 @@ class Nest {
     public function setTargetTemperatureMode($mode, $temperature, $serial_number=null) {
         $serial_number = $this->getDefaultSerial($serial_number);
 
-        if ($mode == TARGET_TEMP_MODE_RANGE) {
+        if ($mode == CON::TARGET_TEMP_MODE_RANGE) {
             if (!is_array($temperature) || count($temperature) != 2 || !is_numeric($temperature[0]) || !is_numeric($temperature[1])) {
-                echo "Error: when using TARGET_TEMP_MODE_RANGE, you need to set the target temperatures (second argument of setTargetTemperatureMode) using an array of two numeric values.\n";
+                echo "Error: when using CON::TARGET_TEMP_MODE_RANGE, you need to set the target temperatures (second argument of setTargetTemperatureMode) using an array of two numeric values.\n";
                 return FALSE;
             }
             $temp_low = $this->temperatureInCelsius($temperature[0], $serial_number);
             $temp_high = $this->temperatureInCelsius($temperature[1], $serial_number);
             $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature_low' => $temp_low, 'target_temperature_high' => $temp_high));
             $set_temp_result = $this->http->POST("/v2/put/shared." . $serial_number, $data);
-        } else if ($mode != TARGET_TEMP_MODE_OFF) {
+        } else if ($mode != CON::TARGET_TEMP_MODE_OFF) {
             // heat or cool
             if (!is_numeric($temperature)) {
-                echo "Error: when using TARGET_TEMP_MODE_HEAT or TARGET_TEMP_MODE_COLD, you need to set the target temperature (second argument of setTargetTemperatureMode) using an numeric value.\n";
+                echo "Error: when using CON::TARGET_TEMP_MODE_HEAT or TARGET_TEMP_MODE_COLD, you need to set the target temperature (second argument of setTargetTemperatureMode) using an numeric value.\n";
                 return FALSE;
             }
             $temperature = $this->temperatureInCelsius($temperature, $serial_number);
@@ -340,7 +339,7 @@ class Nest {
             $modes = $mode;
             $mode = $modes[0];
             if (count($modes) > 1) {
-                if ($mode == FAN_MODE_MINUTES_PER_HOUR) {
+                if ($mode == CON::FAN_MODE_MINUTES_PER_HOUR) {
                     $duty_cycle = (int) $modes[1];
                 } else {
                     $timer = (int) $modes[1];
@@ -381,7 +380,7 @@ class Nest {
     }
 
     public function turnOff($serial_number=null) {
-        return $this->setTargetTemperatureMode(TARGET_TEMP_MODE_OFF, $serial_number);
+        return $this->setTargetTemperatureMode(CON::TARGET_TEMP_MODE_OFF, $serial_number);
     }
 
     public function setAway($away, $serial_number=null) {
@@ -470,9 +469,9 @@ class Nest {
         return $this->last_status->device->{$serial_number}->temperature_scale;
     }
 
-    public function getDevices($type=DEVICE_TYPE_THERMOSTAT) {
+    public function getDevices($type=CON::DEVICE_TYPE_THERMOSTAT) {
         $this->prepareForGet();
-        if ($type == DEVICE_TYPE_PROTECT) {
+        if ($type == CON::DEVICE_TYPE_PROTECT) {
             $protects = array();
             $topaz = isset($this->last_status->topaz) ? $this->last_status->topaz : array();
             foreach ($topaz as $protect) {
@@ -494,7 +493,7 @@ class Nest {
         if (empty($serial_number)) {
             $devices_serials = $this->getDevices();
             if (count($devices_serials) == 0) {
-                $devices_serials = $this->getDevices(DEVICE_TYPE_PROTECT);
+                $devices_serials = $this->getDevices(CON::DEVICE_TYPE_PROTECT);
             }
             $serial_number = $devices_serials[0];
         }
@@ -512,8 +511,8 @@ class Nest {
         $connection_info = $this->last_status->track->{$serial_number};
         return (object) array(
             'online' => $connection_info->online,
-            'last_connection' => date(DATETIME_FORMAT, $connection_info->last_connection/1000),
-            'last_connection_UTC' => gmdate(DATETIME_FORMAT, $connection_info->last_connection/1000),
+            'last_connection' => date(CON::DATETIME_FORMAT, $connection_info->last_connection/1000),
+            'last_connection_UTC' => gmdate(CON::DATETIME_FORMAT, $connection_info->last_connection/1000),
             'wan_ip' => @$connection_info->last_ip,
             'local_ip' => $this->last_status->device->{$serial_number}->local_ip,
             'mac_address' => $this->last_status->device->{$serial_number}->mac_address
