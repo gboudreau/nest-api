@@ -49,7 +49,7 @@ class Nest {
             $weather = $this->http->GET($url);
         } catch (RuntimeException $ex) {
             // NESTAPI_ERROR_NOT_JSON_RESPONSE is kinda normal. The forecast API will often return a '502 Bad Gateway' response... meh.
-            if ($ex->getCode() != NESTAPI_ERROR_NOT_JSON_RESPONSE) {
+            if ($ex->getCode() != CON::NESTAPI_ERROR_NOT_JSON_RESPONSE) {
                 throw new RuntimeException("Unexpected issue fetching forecast.", $ex->getCode(), $ex);
             }
         }
