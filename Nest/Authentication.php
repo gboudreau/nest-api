@@ -16,6 +16,8 @@ class Authentication
     private $cache_file;
     private $cache_expiration;
 
+    private $is_from_cache = FALSE;
+
     public function __construct($username = NULL, $password = NULL) {
         if ($username === NULL && defined('NEST_USERNAME')) {
             $username = NEST_USERNAME;
@@ -42,6 +44,7 @@ class Authentication
         if ($this->loadCache()) {
             // No need to login; we'll use cached values for authentication.
             static::_secureTouch($this->cache_file);
+            $this->is_from_cache = TRUE;
             return;
         }
 
@@ -85,7 +88,11 @@ class Authentication
         return $this->userid;
     }
 
-    public function loadCache() {
+    public function isFromCache(){
+        return $this->is_from_cache;
+    }
+
+    private function loadCache() {
         $cacheIsValid = FALSE;
         if (!file_exists($this->cache_file) && !file_exists($this->cookie_file)) {
             return $cacheIsValid;
