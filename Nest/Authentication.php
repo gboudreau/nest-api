@@ -43,7 +43,6 @@ class Authentication
     public function login() {
         if ($this->loadCache()) {
             // No need to login; we'll use cached values for authentication.
-            static::_secureTouch($this->cache_file);
             $this->is_from_cache = TRUE;
             return;
         }
@@ -53,6 +52,7 @@ class Authentication
         }
 
         $httpRequest = new BaseHttp();
+        $httpRequest->setCookieFile($this->getCookieFile());
 
         $httpResponse = $httpRequest->POST(static::LOGIN_URL, array('username' => $this->username, 'password' => $this->password));
 
@@ -73,6 +73,7 @@ class Authentication
     }
 
     public function getCookieFile() {
+        static::_secureTouch($this->cookie_file);
         return $this->cookie_file;
     }
 
@@ -124,6 +125,7 @@ class Authentication
             'userid' => $this->userid,
             'cache_expiration' => $this->cache_expiration,
         );
+        static::_secureTouch($this->cache_file);
         file_put_contents($this->cache_file, serialize($vars));
     }
 
