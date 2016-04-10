@@ -59,7 +59,7 @@ class BaseHttp
         if ($method == 'POST') {
             curl_setopt($this->ch, CURLOPT_POST, TRUE);
             curl_setopt($this->ch, CURLOPT_POSTFIELDS, $data);
-            $this->headers[] = 'Content-length: ' . strlen($data);
+            $this->addHeader('Content-length', strlen($data));
         }
         curl_setopt($this->ch, CURLOPT_HTTPHEADER, $this->headers);
         curl_setopt($this->ch, CURLOPT_SSL_VERIFYPEER, TRUE); // for security this should always be set to true.
