@@ -475,7 +475,6 @@ class Nest
             throw new \RuntimeException("Error: HTTP request to $url returned cmd = REINIT_STATE. Retrying failed.");
         }
         $this->last_status = $status;
-        $this->auth->saveCache();
         return $status;
     }
 

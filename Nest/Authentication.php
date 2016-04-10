@@ -109,10 +109,14 @@ class Authentication
 
         $cacheIsValid = $this->cache_expiration > time();
 
+        if (!$cacheIsValid) {
+            $this->logout();
+        }
+
         return $cacheIsValid;
     }
 
-    public function saveCache() {
+    private function saveCache() {
         $vars = array(
             'transport_url' => $this->transport_url,
             'access_token' => $this->access_token,
@@ -126,6 +130,7 @@ class Authentication
     public function logout() {
         @unlink($this->getCookieFile());
         @unlink($this->cache_file);
+        $this->is_from_cache = FALSE;
     }
 
     private static function _secureTouch($fname) {
