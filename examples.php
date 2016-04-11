@@ -11,6 +11,8 @@ date_default_timezone_set('America/Montreal');
 // Here's how to use this class:
 
 require_once 'autoload.php'; // Or use composer
+// Note: autoload.php uses a feature only available in PHP >= 5.3 (namespaces support in spl_autoload_register).
+// The rest of the code only requires PHP >= 5.1.2, so if you use composer, that is the minimum version.
 
 use Nest\Nest as Nest;
 
