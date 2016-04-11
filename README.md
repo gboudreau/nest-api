@@ -49,8 +49,10 @@ define('NEST_USERNAME', 'you@gmail.com');
 define('NEST_PASSWORD', 'Something other than 1234 right?');
 
 require_once 'autoload.php'; // Or use composer
+// Note: autoload.php uses a feature only available in PHP >= 5.3 (namespaces support in spl_autoload_register).
+// The rest of the code only requires PHP >= 5.1.2, so if you use composer, that is the minimum version.
 
-$nest = new Nest();
+$nest = new \Nest\Nest();
 
 // Get the device information:
 $infos = $nest->getDeviceInfo();
