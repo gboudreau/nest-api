@@ -36,7 +36,7 @@ class Http extends BaseHttp
         $response = parent::request($method, $url, $data_fields);
 
         if ($response['info']['http_code'] == 401 || (!$response['response'] && curl_errno($this->ch) != 0)) {
-            if ($with_retry && $this->auth->loadCache()) {
+            if ($with_retry && $this->auth->isFromCache()) {
                 // Received 401, and was using cached data; let's try to re-login and retry.
                 $this->auth->logout();
                 if ($response['info']['http_code'] == 401) {

@@ -16,6 +16,8 @@ class Authentication
     private $cache_file;
     private $cache_expiration;
 
+    private $is_from_cache = FALSE;
+
     public function __construct($username = NULL, $password = NULL) {
         if ($username === NULL && defined('NEST_USERNAME')) {
             $username = NEST_USERNAME;
@@ -41,7 +43,7 @@ class Authentication
     public function login() {
         if ($this->loadCache()) {
             // No need to login; we'll use cached values for authentication.
-            static::_secureTouch($this->cache_file);
+            $this->is_from_cache = TRUE;
             return;
         }
 
@@ -50,6 +52,7 @@ class Authentication
         }
 
         $httpRequest = new BaseHttp();
+        $httpRequest->setCookieFile($this->getCookieFile());
 
         $httpResponse = $httpRequest->POST(static::LOGIN_URL, array('username' => $this->username, 'password' => $this->password));
 
@@ -70,6 +73,7 @@ class Authentication
     }
 
     public function getCookieFile() {
+        static::_secureTouch($this->cookie_file);
         return $this->cookie_file;
     }
 
@@ -85,7 +89,11 @@ class Authentication
         return $this->userid;
     }
 
-    public function loadCache() {
+    public function isFromCache(){
+        return $this->is_from_cache;
+    }
+
+    private function loadCache() {
         $cacheIsValid = FALSE;
         if (!file_exists($this->cache_file) && !file_exists($this->cookie_file)) {
             return $cacheIsValid;
@@ -102,10 +110,14 @@ class Authentication
 
         $cacheIsValid = $this->cache_expiration > time();
 
+        if (!$cacheIsValid) {
+            $this->logout();
+        }
+
         return $cacheIsValid;
     }
 
-    public function saveCache() {
+    private function saveCache() {
         $vars = array(
             'transport_url' => $this->transport_url,
             'access_token' => $this->access_token,
@@ -113,12 +125,14 @@ class Authentication
             'userid' => $this->userid,
             'cache_expiration' => $this->cache_expiration,
         );
+        static::_secureTouch($this->cache_file);
         file_put_contents($this->cache_file, serialize($vars));
     }
 
     public function logout() {
         @unlink($this->getCookieFile());
         @unlink($this->cache_file);
+        $this->is_from_cache = FALSE;
     }
 
     private static function _secureTouch($fname) {
