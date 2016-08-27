@@ -122,7 +122,7 @@ class Nest {
     }
 
     public function getUserLocations() {
-        $this->getStatus();
+        $this->prepareForGet();
         $structures = (array) $this->last_status->structure;
         $user_structures = array();
         $class_name = get_class($this);
@@ -155,7 +155,7 @@ class Nest {
     }
 
     public function getDeviceSchedule($serial_number=null) {
-        $this->getStatus();
+        $this->prepareForGet();
         $serial_number = $this->getDefaultSerial($serial_number);
         $schedule_days = $this->last_status->schedule->{$serial_number}->days;
 
@@ -204,7 +204,7 @@ class Nest {
     }
 
     public function getDeviceInfo($serial_number=null) {
-        $this->getStatus();
+        $this->prepareForGet();
         $serial_number = $this->getDefaultSerial($serial_number);
         $topaz = isset($this->last_status->topaz) ? $this->last_status->topaz : array();
         foreach ($topaz as $protect) {
@@ -307,7 +307,7 @@ class Nest {
             'auto_heat' => ((int) $this->last_status->device->{$serial_number}->leaf_threshold_heat === 1000) ? false : floor($this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->leaf_threshold_heat)),
             'where' => isset($this->last_status->device->{$serial_number}->where_id) ? isset($this->where_map[$this->last_status->device->{$serial_number}->where_id]) ? $this->where_map[$this->last_status->device->{$serial_number}->where_id] : $this->last_status->device->{$serial_number}->where_id : ""
         );
-        if($this->last_status->device->{$serial_number}->has_humidifier) {
+        if ($this->last_status->device->{$serial_number}->has_humidifier) {
           $infos->current_state->humidifier= $this->last_status->device->{$serial_number}->humidifier_state;
           $infos->target->humidity = $this->last_status->device->{$serial_number}->target_humidity;
           $infos->target->humidity_enabled = $this->last_status->device->{$serial_number}->target_humidity_enabled;
@@ -482,6 +482,10 @@ class Nest {
 
     /* Helper functions */
 
+    public function clearStatusCache() {
+        unset($this->last_status);
+    }
+
     public function getStatus($retry=TRUE) {
         $url = "/v3/mobile/" . $this->user;
         $status = $this->doGET($url);
@@ -567,7 +571,7 @@ class Nest {
     }
 
     private function getDeviceNetworkInfo($serial_number=null) {
-        $this->getStatus();
+        $this->prepareForGet();
         $serial_number = $this->getDefaultSerial($serial_number);
         $connection_info = $this->last_status->track->{$serial_number};
         return (object) array(
@@ -636,7 +640,8 @@ class Nest {
         $this->user = $vars['user'];
         $this->userid = $vars['userid'];
         $this->cache_expiration = $vars['cache_expiration'];
-        $this->last_status = $vars['last_status'];
+        // Let's not load this from the disk cache; otherwise, prepareForGet() would always skip getStatus()
+        // $this->last_status = $vars['last_status'];
     }
     
     private function saveCache() {
