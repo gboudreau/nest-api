@@ -706,7 +706,10 @@ class Nest {
         $curl_cainfo = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cacert.pem';
         $last_month = time()-30*24*60*60;
         if (!file_exists($curl_cainfo) || filemtime($curl_cainfo) < $last_month || filesize($curl_cainfo) < 100000) {
-            file_put_contents($curl_cainfo, file_get_contents('https://curl.haxx.se/ca/cacert.pem'));
+            $certs = static::get_curl_certs();
+            if ($certs) {
+                file_put_contents($curl_cainfo, $certs);
+            }
         }
         if (file_exists($curl_cainfo) && filesize($curl_cainfo) > 100000) {
             curl_setopt($ch, CURLOPT_CAINFO, $curl_cainfo);
@@ -752,6 +755,26 @@ class Nest {
         }
 
         return $json;
+    }
+    
+    private static function get_curl_certs() {
+        $url = 'https://curl.haxx.se/ca/cacert.pem';
+        $certs = @file_get_contents($url);
+        if (!$certs) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, TRUE); // for security this should always be set to true.
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);    // for security this should always be set to 2.
+            $response = curl_exec($ch);
+            $info = curl_getinfo($ch);
+            curl_close($ch);
+            if ($info['http_code'] == 200) {
+                $certs = $response;
+            }
+        }
+        return $certs;
     }
 
     private static function secure_touch($fname) {
