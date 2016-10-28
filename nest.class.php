@@ -372,6 +372,10 @@ class Nest {
         return $this->doPOST("/v2/put/shared." . $serial_number, $data);
     }
 
+    public function setEcoTemperatures($temp_low, $temp_high, $serial_number=null) {
+        return $this->setAwayTemperatures($temp_low, $temp_high, $serial_number);
+    }
+
     public function setAwayTemperatures($temp_low, $temp_high, $serial_number=null) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $temp_low = $this->temperatureInCelsius($temp_low, $serial_number);
