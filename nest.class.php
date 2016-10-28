@@ -441,7 +441,7 @@ class Nest {
     }
 
     public function turnOff($serial_number=null) {
-        return $this->setTargetTemperatureMode(TARGET_TEMP_MODE_OFF, $serial_number);
+        return $this->setTargetTemperatureMode(TARGET_TEMP_MODE_OFF, 0, $serial_number);
     }
 
     public function setAway($away, $serial_number=null) {
