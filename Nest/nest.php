@@ -100,7 +100,7 @@ class Nest
     }
 
     public function getUserLocations() {
-        $this->_getStatus();
+        $this->_prepareForGet();
         $structures = (array) $this->last_status->structure;
         $user_structures = array();
         $class_name = get_class($this);
@@ -133,7 +133,7 @@ class Nest
     }
 
     public function getDeviceSchedule($serial_number = NULL) {
-        $this->_getStatus();
+        $this->_prepareForGet();
         $serial_number = $this->_getDefaultSerial($serial_number);
         $schedule_days = $this->last_status->schedule->{$serial_number}->days;
 
@@ -182,7 +182,7 @@ class Nest
     }
 
     public function getDeviceInfo($serial_number = NULL) {
-        $this->_getStatus();
+        $this->_prepareForGet();
         $serial_number = $this->_getDefaultSerial($serial_number);
         $topaz = isset($this->last_status->topaz) ? $this->last_status->topaz : array();
         foreach ($topaz as $protect) {
@@ -543,7 +543,7 @@ class Nest
     }
 
     public function getDeviceNetworkInfo($serial_number = NULL) {
-        $this->_getStatus();
+        $this->_prepareForGet();
         $serial_number = $this->_getDefaultSerial($serial_number);
         $connection_info = $this->last_status->track->{$serial_number};
         return (object) array(
