@@ -521,7 +521,7 @@ class Nest
             return $protects;
         }
         $devices_serials = array();
-        foreach ($this->last_status->user->{$this->userid}->structures as $structure) {
+        foreach ($this->last_status->user->{$this->auth->getUserId()}->structures as $structure) {
             list(, $structure_id) = explode('.', $structure);
             foreach ($this->last_status->structure->{$structure_id}->devices as $device) {
                 list(, $device_serial) = explode('.', $device);
