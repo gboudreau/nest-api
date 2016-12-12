@@ -24,7 +24,11 @@ class BaseHttp
     }
 
     public function addHeader($header, $value) {
-        $this->headers[] = $header . ': ' . $value;
+        $headerString = $header . ': ' . $value;
+        if (!in_array($headerString, $this->headers)){
+            $this->headers[] = $headerString;
+        }
+
     }
 
     public function setCookieFile($cookie_file) {
