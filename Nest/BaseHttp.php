@@ -24,7 +24,11 @@ class BaseHttp
     }
 
     public function addHeader($header, $value) {
-        $this->headers[] = $header . ': ' . $value;
+        $headerString = $header . ': ' . $value;
+        if (!in_array($headerString, $this->headers)){
+            $this->headers[] = $headerString;
+        }
+
     }
 
     public function setCookieFile($cookie_file) {
@@ -81,7 +85,37 @@ class BaseHttp
         // Update cacert.pem (valid CA certificates list) from the cURL website once a month
         $last_month = time()-30*24*60*60;
         if (!file_exists($this->certificateAuthorityInfo) || filemtime($this->certificateAuthorityInfo) < $last_month || filesize($this->certificateAuthorityInfo) < 100000) {
-            file_put_contents($this->certificateAuthorityInfo, file_get_contents('https://curl.haxx.se/ca/cacert.pem'));
+            $certs = static::get_curl_certs();
+            if ($certs) {
+                file_put_contents($this->certificateAuthorityInfo, $certs);
+            }
         }
+    }
+
+    private static function get_curl_certs() {
+        $url = 'https://curl.haxx.se/ca/cacert.pem';
+        $certs = @file_get_contents($url);
+        if (!$certs) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, TRUE);
+            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, TRUE); // for security this should always be set to true.
+            curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);    // for security this should always be set to 2.
+            $response = curl_exec($ch);
+            $info = curl_getinfo($ch);
+            curl_close($ch);
+            if ($info['http_code'] == 200) {
+                $certs = $response;
+            }
+            elseif ($info['http_code'] == 0) {
+                throw new \Exception('CA update failure. Please download the file found here: ' .
+                    $url . ', and place it here: ' . sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cacert.pem' .
+                    ' for this script to work. Alternatively, set curl.cainfo for your ' .
+                    'php environment to download it automatically.'
+                );
+            }
+        }
+        return $certs;
     }
 }
