@@ -6,6 +6,8 @@ define('TARGET_TEMP_MODE_COOL', 'cool');
 define('TARGET_TEMP_MODE_HEAT', 'heat');
 define('TARGET_TEMP_MODE_RANGE', 'range');
 define('TARGET_TEMP_MODE_OFF', 'off');
+define('ECO_MODE_MANUAL', 'manual-eco');
+define('ECO_MODE_SCHEDULE', 'schedule');
 define('FAN_MODE_AUTO', 'auto');
 define('FAN_MODE_ON', 'on');
 define('FAN_MODE_EVERY_DAY_ON', 'on');
@@ -372,6 +374,16 @@ class Nest {
         return $this->doPOST("/v2/put/shared." . $serial_number, $data);
     }
 
+    public function setEcoMode($mode, $serial_number=null) {
+        $serial_number = $this->getDefaultSerial($serial_number);
+        $data = array();
+        $data['mode'] = $mode;
+        $data['touched_by'] = 4;
+        $data['mode_update_timestamp'] = time();
+        $data = json_encode(array('eco' => $data));
+        return $this->doPOST("/v2/put/device." . $serial_number, $data);
+    }
+
     public function setEcoTemperatures($temp_low, $temp_high, $serial_number=null) {
         return $this->setAwayTemperatures($temp_low, $temp_high, $serial_number);
     }
@@ -452,6 +464,11 @@ class Nest {
         $serial_number = $this->getDefaultSerial($serial_number);
         $data = json_encode(array('away' => $away, 'away_timestamp' => time(), 'away_setter' => 0));
         $structure_id = $this->getDeviceInfo($serial_number)->location;
+        if ($away == AWAY_MODE_ON) {
+            $this->setEcoMode(ECO_MODE_MANUAL);
+        } else {
+            $this->setEcoMode(ECO_MODE_SCHEDULE);
+        }
         return $this->doPOST("/v2/put/structure." . $structure_id, $data);
     }
     
