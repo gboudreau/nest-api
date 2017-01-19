@@ -294,6 +294,26 @@ class Nest {
                 'manual_away' => $manual_away,
                 'leaf' => $this->last_status->device->{$serial_number}->leaf,
                 'battery_level' => $this->last_status->device->{$serial_number}->battery_level,
+                'active_stages' => (object) array(
+                    'heat' => (object) array(
+                        'stage1' => $this->last_status->shared->{$serial_number}->hvac_heater_state,
+                        'stage2' => $this->last_status->shared->{$serial_number}->hvac_heat_x2_state,
+                        'stage3' => $this->last_status->shared->{$serial_number}->hvac_heat_x3_state,
+                        'alt' => $this->last_status->shared->{$serial_number}->hvac_alt_heat_state,
+                        'alt_stage2' => $this->last_status->shared->{$serial_number}->hvac_alt_heat_x2_state,
+                        'aux' => $this->last_status->shared->{$serial_number}->hvac_aux_heater_state,
+                        'emergency' => $this->last_status->shared->{$serial_number}->hvac_emer_heat_state,
+                    ),
+                    'cool' => (object) array(
+                        'stage1' => $this->last_status->shared->{$serial_number}->hvac_ac_state,
+                        'stage2' => $this->last_status->shared->{$serial_number}->hvac_cool_x2_state,
+                        'stage3' => $this->last_status->shared->{$serial_number}->hvac_cool_x3_state,
+                    ),
+                ),
+                'eco_temperatures' => (object)array(
+                    'low' => ($this->last_status->device->{$serial_number}->away_temperature_low_enabled) ? $this->temperatureInUserScale((float)$this->last_status->device->{$serial_number}->away_temperature_low) : false,
+                    'high' => ($this->last_status->device->{$serial_number}->away_temperature_high_enabled) ? $this->temperatureInUserScale((float)$this->last_status->device->{$serial_number}->away_temperature_high) : false,
+                ),
             ),
             'target' => (object) array(
                 'mode' => $target_mode,
