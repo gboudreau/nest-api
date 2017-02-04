@@ -666,7 +666,7 @@ class Nest {
     }
 
     private function use_cache() {
-        return file_exists($this->cookie_file) && file_exists($this->cache_file) && !empty($this->cache_expiration) && $this->cache_expiration > time();
+        return file_exists($this->cookie_file) && file_exists($this->cache_file) && (empty($this->cache_expiration) || $this->cache_expiration > time());
     }
     
     private function loadCache() {
