@@ -271,6 +271,7 @@ class Nest {
         $manual_away = $this->last_status->structure->{$structure}->away;
         $mode = strtolower($this->last_status->device->{$serial_number}->current_schedule_mode);
         $target_mode = $this->last_status->shared->{$serial_number}->target_temperature_type;
+        $eco_mode = $this->last_status->device->{$serial_number}->eco->mode;	//manual-eco, auto-eco, schedule
         if ($manual_away || $mode == 'away' || $this->last_status->shared->{$serial_number}->auto_away > 0) {
             $mode = $mode . ',away';
             $target_mode = 'range';
@@ -310,7 +311,8 @@ class Nest {
                         'stage3' => $this->last_status->shared->{$serial_number}->hvac_cool_x3_state,
                     ),
                 ),
-                'eco_temperatures' => (object)array(
+                'eco_mode' => $eco_mode,
+                'eco_temperatures' => (object) array(
                     'low' => ($this->last_status->device->{$serial_number}->away_temperature_low_enabled) ? $this->temperatureInUserScale((float)$this->last_status->device->{$serial_number}->away_temperature_low) : false,
                     'high' => ($this->last_status->device->{$serial_number}->away_temperature_high_enabled) ? $this->temperatureInUserScale((float)$this->last_status->device->{$serial_number}->away_temperature_high) : false,
                 ),
@@ -485,9 +487,9 @@ class Nest {
         $data = json_encode(array('away' => $away, 'away_timestamp' => time(), 'away_setter' => 0));
         $structure_id = $this->getDeviceInfo($serial_number)->location;
         if ($away == AWAY_MODE_ON) {
-            $this->setEcoMode(ECO_MODE_MANUAL);
+            $this->setEcoMode(ECO_MODE_MANUAL, $serial_number);
         } else {
-            $this->setEcoMode(ECO_MODE_SCHEDULE);
+            $this->setEcoMode(ECO_MODE_SCHEDULE, $serial_number);
         }
         return $this->doPOST("/v2/put/structure." . $structure_id, $data);
     }
