@@ -1,6 +1,6 @@
 <?php
 
-define('DATE_FORMAT','Y-m-d');
+define('DATE_FORMAT', 'Y-m-d');
 define('DATETIME_FORMAT', DATE_FORMAT . ' H:i:s');
 define('TARGET_TEMP_MODE_COOL', 'cool');
 define('TARGET_TEMP_MODE_HEAT', 'heat');
@@ -40,10 +40,24 @@ define('NESTAPI_ERROR_NOT_JSON_RESPONSE', 1002);
 define('NESTAPI_ERROR_API_JSON_ERROR', 1003);
 define('NESTAPI_ERROR_API_OTHER_ERROR', 1004);
 
-class Nest {
-    const user_agent = 'Nest/2.1.3 CFNetwork/548.0.4';
-    const protocol_version = 1;
-    const login_url = 'https://home.nest.com/user/login';
+/**
+ * Unofficial Nest API
+ *
+ * This is an unofficial PHP class that will allow you to monitor and control your Nest Learning Thermostat, and Nest Protect.
+ *
+ * @category Algorithm
+ * @package  PommePause\Nest\API
+ * @author   Guillaume Boudreau <guillaume@pommepause.com>
+ * @license  GNU LESSER GENERAL PUBLIC LICENSE Version 3
+ * @link     https://github.com/gboudreau/nest-api/
+ * @link     https://nest.com/
+ */
+class Nest
+{
+    const USER_AGENT = 'Nest/2.1.3 CFNetwork/548.0.4';
+    const PROTOCOL_VERSION = 1;
+    const LOGIN_URL = 'https://home.nest.com/user/login';
+
     protected $days_maps = array('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun');
 
     protected $where_map = array(
@@ -65,7 +79,7 @@ class Nest {
         '00000000-0000-0000-0000-00010000000f' => 'Upstairs',
         '00000000-0000-0000-0000-000100000010' => 'Dining Room',
     );
-    
+
     protected $transport_url;
     protected $access_token;
     protected $user;
@@ -74,36 +88,48 @@ class Nest {
     protected $cache_file;
     protected $cache_expiration;
     protected $last_status;
-    
-    function __construct($username=null, $password=null) {
-        if ($username === null && defined('USERNAME')) {
+
+    /**
+     * Constructor
+     *
+     * @param string|null $username Your Nest username.
+     * @param string|null $password Your Nest password.
+     */
+    public function __construct($username = NULL, $password = NULL) {
+        if ($username === NULL && defined('USERNAME')) {
             $username = USERNAME;
         }
-        if ($password === null && defined('PASSWORD')) {
+        if ($password === NULL && defined('PASSWORD')) {
             $password = PASSWORD;
         }
-        if ($username === null || $password === null) {
+        if ($username === NULL || $password === NULL) {
             throw new InvalidArgumentException('Nest credentials were not provided.');
         }
         $this->username = $username;
         $this->password = $password;
 
         $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . md5($username . $password);
-        static::secure_touch($this->cookie_file);
+        static::secureTouch($this->cookie_file);
 
         $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . md5($username . $password);
-        
+
         // Attempt to load the cache
         $this->loadCache();
-        static::secure_touch($this->cache_file);
-        
+        static::secureTouch($this->cache_file);
+
         // Log in, if needed
         $this->login();
     }
-    
-    /* Getters and setters */
 
-    public function getWeather($postal_code, $country_code=NULL) {
+    /**
+     * Get the outside temperature & humidity, given a location (zip/postal code & optional country code).
+     *
+     * @param string $postal_code  Zip or postal code
+     * @param string $country_code (Optional) Country code
+     *
+     * @return stdClass
+     */
+    public function getWeather($postal_code, $country_code = NULL) {
         try {
             $url = "https://home.nest.com/api/0.1/weather/forecast/$postal_code";
             if (!empty($country_code)) {
@@ -123,6 +149,11 @@ class Nest {
         );
     }
 
+    /**
+     * Get a list of all the locations configured in the Nest account.
+     *
+     * @return array
+     */
     public function getUserLocations() {
         $this->prepareForGet();
         $structures = (array) $this->last_status->structure;
@@ -156,7 +187,17 @@ class Nest {
         return $user_structures;
     }
 
-    public function getDeviceSchedule($serial_number=null) {
+    /**
+     * Get the schedule details for the specified device.
+     *
+     * @param string $serial_number The device (thermostat or protect) serial number. Defaults to the first device of the account.
+     *
+     * @return array Returns as array, one element for each day of the week for which there has at least one scheduled event.
+     *               Array keys are a textual representation of a day, three letters, as returned by `date('D')`.
+     *               Array values are arrays of scheduled temperatures, including a time (in minutes after midnight),
+     *               and a mode (one of the TARGET_TEMP_MODE_* defines).
+     */
+    public function getDeviceSchedule($serial_number = NULL) {
         $this->prepareForGet();
         $serial_number = $this->getDefaultSerial($serial_number);
         $schedule_days = $this->last_status->schedule->{$serial_number}->days;
@@ -178,17 +219,24 @@ class Nest {
                 $schedule[(int) $day] = array_values($events);
             }
         }
-        
+
         ksort($schedule);
         $sorted_schedule = array();
         foreach ($schedule as $day => $events) {
             $sorted_schedule[$this->days_maps[(int) $day]] = $events;
         }
-        
+
         return $sorted_schedule;
     }
-    
-    public function getNextScheduledEvent($serial_number=null) {
+
+    /**
+     * Get the next scheduled event.
+     *
+     * @param string $serial_number The device (thermostat or protect) serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool Returns the next scheduled event, or FALSE is there is none.
+     */
+    public function getNextScheduledEvent($serial_number = NULL) {
         $schedule = $this->getDeviceSchedule($serial_number);
         $next_event = FALSE;
         $time = date('H') * 60 + date('i');
@@ -205,7 +253,14 @@ class Nest {
         return $next_event;
     }
 
-    public function getDeviceInfo($serial_number=null) {
+    /**
+     * Get the specified device (thermostat or protect) information.
+     *
+     * @param string $serial_number The device (thermostat or protect) serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass
+     */
+    public function getDeviceInfo($serial_number = NULL) {
         $this->prepareForGet();
         $serial_number = $this->getDefaultSerial($serial_number);
         $topaz = isset($this->last_status->topaz) ? $this->last_status->topaz : array();
@@ -214,7 +269,7 @@ class Nest {
                 // The specified device is a Nest Protect
                 $infos = (object) array(
                     'co_status' => $protect->co_status == 0 ? "OK" : $protect->co_status,
-                    'co_previous_peak' => isset($protect->co_previous_peak) ? $protect->co_previous_peak : null,
+                    'co_previous_peak' => isset($protect->co_previous_peak) ? $protect->co_previous_peak : NULL,
                     'co_sequence_number' => $protect->co_sequence_number,
                     'smoke_status' => $protect->smoke_status == 0 ? "OK" : $protect->smoke_status,
                     'smoke_sequence_number' => $protect->smoke_sequence_number,
@@ -223,12 +278,12 @@ class Nest {
                     'line_power_present' => $protect->line_power_present,
                     'battery_level' => $protect->battery_level,
                     'battery_health_state' => $protect->battery_health_state == 0 ? "OK" : $protect->battery_health_state,
-                    'wired_or_battery' => isset($protect->wired_or_battery) ? $protect->wired_or_battery : null,
-                    'born_on_date' => isset($protect->device_born_on_date_utc_secs) ? date(DATE_FORMAT, $protect->device_born_on_date_utc_secs) : null,
+                    'wired_or_battery' => isset($protect->wired_or_battery) ? $protect->wired_or_battery : NULL,
+                    'born_on_date' => isset($protect->device_born_on_date_utc_secs) ? date(DATE_FORMAT, $protect->device_born_on_date_utc_secs) : NULL,
                     'replace_by_date' => date(DATE_FORMAT, $protect->replace_by_date_utc_secs),
                     'last_update' => date(DATETIME_FORMAT, $protect->{'$timestamp'}/1000),
                     'last_manual_test' => $protect->latest_manual_test_start_utc_secs == 0 ? NULL : date(DATETIME_FORMAT, $protect->latest_manual_test_start_utc_secs),
-                    'ntp_green_led_brightness' => isset($protect->ntp_green_led_brightness) ? $protect->ntp_green_led_brightness : null,
+                    'ntp_green_led_brightness' => isset($protect->ntp_green_led_brightness) ? $protect->ntp_green_led_brightness : NULL,
                     'tests_passed' => array(
                         'led'       => $protect->component_led_test_passed,
                         'pir'       => $protect->component_pir_test_passed,
@@ -240,8 +295,8 @@ class Nest {
                         'co'        => $protect->component_co_test_passed,
                         'us'        => $protect->component_us_test_passed,
                         'hum'       => $protect->component_hum_test_passed,
-                        'speaker'   => isset($protect->component_speaker_test_passed) ? $protect->component_speaker_test_passed : null,
-                        'buzzer'    => isset($protect->component_buzzer_test_passed) ? $protect->component_buzzer_test_passed : null,                        
+                        'speaker'   => isset($protect->component_speaker_test_passed) ? $protect->component_speaker_test_passed : NULL,
+                        'buzzer'    => isset($protect->component_buzzer_test_passed) ? $protect->component_buzzer_test_passed : NULL,
                     ),
                     'nest_features' => array(
                         'night_time_promise' => !empty($protect->ntp_green_led_enable) ? $protect->ntp_green_led_enable : 0,
@@ -250,7 +305,7 @@ class Nest {
                         'heads_up'           => !empty($protect->heads_up_enable) ? $protect->heads_up_enable : 0,
                         'steam_detection'    => !empty($protect->steam_detection_enable) ? $protect->steam_detection_enable : 0,
                         'home_alarm_link'    => !empty($protect->home_alarm_link_capable) ? $protect->home_alarm_link_capable : 0,
-                        'wired_led_enable'   => !empty($protect->wired_led_enable) ? $protect->wired_led_enable : 0,                        
+                        'wired_led_enable'   => !empty($protect->wired_led_enable) ? $protect->wired_led_enable : 0,
                     ),
                     'serial_number' => $protect->serial_number,
                     'location' => $protect->structure_id,
@@ -261,7 +316,7 @@ class Nest {
                     ),
                     'name' => !empty($protect->description) ? $protect->description : DEVICE_WITH_NO_NAME,
                     'where' => isset($this->where_map[$protect->spoken_where_id]) ? $this->where_map[$protect->spoken_where_id] : $protect->spoken_where_id,
-                    'color' => isset($protect->device_external_color) ? $protect->device_external_color : null,
+                    'color' => isset($protect->device_external_color) ? $protect->device_external_color : NULL,
                 );
                 return $infos;
             }
@@ -350,8 +405,8 @@ class Nest {
                 ),
                 'eco_mode' => $eco_mode,
                 'eco_temperatures' => (object) array(
-                    'low' => ($this->last_status->device->{$serial_number}->away_temperature_low_enabled) ? $this->temperatureInUserScale((float)$this->last_status->device->{$serial_number}->away_temperature_low) : false,
-                    'high' => ($this->last_status->device->{$serial_number}->away_temperature_high_enabled) ? $this->temperatureInUserScale((float)$this->last_status->device->{$serial_number}->away_temperature_high) : false,
+                    'low' => ($this->last_status->device->{$serial_number}->away_temperature_low_enabled) ? $this->temperatureInUserScale((float)$this->last_status->device->{$serial_number}->away_temperature_low) : FALSE,
+                    'high' => ($this->last_status->device->{$serial_number}->away_temperature_high_enabled) ? $this->temperatureInUserScale((float)$this->last_status->device->{$serial_number}->away_temperature_high) : FALSE,
                 ),
             ),
             'target' => (object) array(
@@ -364,20 +419,27 @@ class Nest {
             'location' => $structure,
             'network' => $this->getDeviceNetworkInfo($serial_number),
             'name' => !empty($this->last_status->shared->{$serial_number}->name) ? $this->last_status->shared->{$serial_number}->name : DEVICE_WITH_NO_NAME,
-            'auto_cool' => ((int) $this->last_status->device->{$serial_number}->leaf_threshold_cool === 0) ? false : ceil($this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->leaf_threshold_cool)),
-            'auto_heat' => ((int) $this->last_status->device->{$serial_number}->leaf_threshold_heat === 1000) ? false : floor($this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->leaf_threshold_heat)),
+            'auto_cool' => ((int) $this->last_status->device->{$serial_number}->leaf_threshold_cool === 0) ? FALSE : ceil($this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->leaf_threshold_cool)),
+            'auto_heat' => ((int) $this->last_status->device->{$serial_number}->leaf_threshold_heat === 1000) ? FALSE : floor($this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->leaf_threshold_heat)),
             'where' => isset($this->last_status->device->{$serial_number}->where_id) ? isset($this->where_map[$this->last_status->device->{$serial_number}->where_id]) ? $this->where_map[$this->last_status->device->{$serial_number}->where_id] : $this->last_status->device->{$serial_number}->where_id : ""
         );
         if ($this->last_status->device->{$serial_number}->has_humidifier) {
-          $infos->current_state->humidifier= $this->last_status->device->{$serial_number}->humidifier_state;
-          $infos->target->humidity = $this->last_status->device->{$serial_number}->target_humidity;
-          $infos->target->humidity_enabled = $this->last_status->device->{$serial_number}->target_humidity_enabled;
+            $infos->current_state->humidifier = $this->last_status->device->{$serial_number}->humidifier_state;
+            $infos->target->humidity = $this->last_status->device->{$serial_number}->target_humidity;
+            $infos->target->humidity_enabled = $this->last_status->device->{$serial_number}->target_humidity_enabled;
         }
 
         return $infos;
     }
-  
-    public function getEnergyLatest($serial_number=null) {
+
+    /**
+     * Get the last 10 days energy report.
+     *
+     * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool
+     */
+    public function getEnergyLatest($serial_number = NULL) {
         $serial_number = $this->getDefaultSerial($serial_number);
 
         $payload = array(
@@ -387,11 +449,20 @@ class Nest {
         );
 
         $url = '/v5/subscribe';
-    
+
         return $this->doPOST($url, json_encode($payload));
     }
 
-    public function setTargetTemperatureMode($mode, $temperature, $serial_number=null) {
+    /**
+     * Change the thermostat target mode and temperature
+     *
+     * @param string      $mode          One of the TARGET_TEMP_MODE_* constants.
+     * @param float|array $temperature   Target temperature; specify a float when setting $mode = TARGET_TEMP_MODE_HEAT or TARGET_TEMP_MODE_COLD, and a array of two float values when setting $mode = TARGET_TEMP_MODE_RANGE. Not needed when setting $mode = TARGET_TEMP_MODE_OFF.
+     * @param string      $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     */
+    public function setTargetTemperatureMode($mode, $temperature = NULL, $serial_number = NULL) {
         $serial_number = $this->getDefaultSerial($serial_number);
 
         if ($mode == TARGET_TEMP_MODE_RANGE) {
@@ -403,7 +474,7 @@ class Nest {
             $temp_high = $this->temperatureInCelsius($temperature[1], $serial_number);
             $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature_low' => $temp_low, 'target_temperature_high' => $temp_high));
             $set_temp_result = $this->doPOST("/v2/put/shared." . $serial_number, $data);
-        } else if ($mode != TARGET_TEMP_MODE_OFF) {
+        } elseif ($mode != TARGET_TEMP_MODE_OFF) {
             // heat or cool
             if (!is_numeric($temperature)) {
                 echo "Error: when using TARGET_TEMP_MODE_HEAT or TARGET_TEMP_MODE_COLD, you need to set the target temperature (second argument of setTargetTemperatureMode) using an numeric value.\n";
@@ -418,14 +489,31 @@ class Nest {
         return $this->doPOST("/v2/put/shared." . $serial_number, $data);
     }
 
-    public function setTargetTemperature($temperature, $serial_number=null) {
+    /**
+     * Change the thermostat target temperature, when the thermostat is not using a range.
+     *
+     * @param float  $temperature   Target temperature.
+     * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     */
+    public function setTargetTemperature($temperature, $serial_number = NULL) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $temperature = $this->temperatureInCelsius($temperature, $serial_number);
         $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature' => $temperature));
         return $this->doPOST("/v2/put/shared." . $serial_number, $data);
     }
-    
-    public function setTargetTemperatures($temp_low, $temp_high, $serial_number=null) {
+
+    /**
+     * Change the thermostat target temperatures, when the thermostat is using a range.
+     *
+     * @param float  $temp_low      Target low temperature.
+     * @param float  $temp_high     Target high temperature.
+     * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     */
+    public function setTargetTemperatures($temp_low, $temp_high, $serial_number = NULL) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $temp_low = $this->temperatureInCelsius($temp_low, $serial_number);
         $temp_high = $this->temperatureInCelsius($temp_high, $serial_number);
@@ -433,7 +521,15 @@ class Nest {
         return $this->doPOST("/v2/put/shared." . $serial_number, $data);
     }
 
-    public function setEcoMode($mode, $serial_number=null) {
+    /**
+     * Set the thermostat to use ECO mode ($mode = ECO_MODE_MANUAL) or not ($mode = ECO_MODE_SCHEDULE).
+     *
+     * @param string $mode          One of the ECO_MODE_* constants.
+     * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     */
+    public function setEcoMode($mode, $serial_number = NULL) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $data = array();
         $data['mode'] = $mode;
@@ -443,24 +539,42 @@ class Nest {
         return $this->doPOST("/v2/put/device." . $serial_number, $data);
     }
 
-    public function setEcoTemperatures($temp_low, $temp_high, $serial_number=null) {
+    /**
+     * Change the thermostat ECO temperatures.
+     *
+     * @param float  $temp_low      ECO low temperature.
+     * @param float  $temp_high     ECO high temperature.
+     * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     */
+    public function setEcoTemperatures($temp_low, $temp_high, $serial_number = NULL) {
         return $this->setAwayTemperatures($temp_low, $temp_high, $serial_number);
     }
 
-    public function setAwayTemperatures($temp_low, $temp_high, $serial_number=null) {
+    /**
+     * Change the thermostat away temperatures. This method is an alias for setEcoTemperatures().
+     *
+     * @param float  $temp_low      Away low temperature.
+     * @param float  $temp_high     Away high temperature.
+     * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     */
+    public function setAwayTemperatures($temp_low, $temp_high, $serial_number = NULL) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $temp_low = $this->temperatureInCelsius($temp_low, $serial_number);
         $temp_high = $this->temperatureInCelsius($temp_high, $serial_number);
         $data = array();
         if ($temp_low === FALSE || $temp_low < 4) {
             $data['away_temperature_low_enabled'] = FALSE;
-        } else if ($temp_low != NULL) {
+        } elseif ($temp_low != NULL) {
             $data['away_temperature_low_enabled'] = TRUE;
             $data['away_temperature_low'] = $temp_low;
         }
         if ($temp_high === FALSE || $temp_high > 32) {
             $data['away_temperature_high_enabled'] = FALSE;
-        } else if ($temp_high != NULL) {
+        } elseif ($temp_high != NULL) {
             $data['away_temperature_high_enabled'] = TRUE;
             $data['away_temperature_high'] = $temp_high;
         }
@@ -468,9 +582,19 @@ class Nest {
         return $this->doPOST("/v2/put/device." . $serial_number, $data);
     }
 
-    public function setFanMode($mode, $serial_number=null) {
-        $duty_cycle = null;
-        $timer = null;
+    /**
+     * Set the thermostat-controlled fan mode.
+     *
+     * @param string|array $mode          One of the following constants: FAN_MODE_AUTO, FAN_MODE_ON, FAN_MODE_EVERY_DAY_ON or FAN_MODE_EVERY_DAY_OFF.
+     * @param string       $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     *
+     * @throws Exception
+     */
+    public function setFanMode($mode, $serial_number = NULL) {
+        $duty_cycle = NULL;
+        $timer = NULL;
         if (is_array($mode)) {
             $modes = $mode;
             $mode = $modes[0];
@@ -483,61 +607,124 @@ class Nest {
             } else {
                 throw new Exception("setFanMode(array \$mode[, ...]) needs at least a mode and a value in the \$mode array.");
             }
-        } else if (!is_string($mode)) {
+        } elseif (!is_string($mode)) {
             throw new Exception("setFanMode() can only take a string or an array as it's first parameter.");
         }
         return $this->_setFanMode($mode, $duty_cycle, $timer, $serial_number);
     }
 
-    public function setFanModeMinutesPerHour($mode, $serial_number=null) {
+    /**
+     * Set the thermostat-controlled fan to be ON for a specific number of minutes each hour.
+     *
+     * @param string|array $mode          One of the FAN_MODE_MINUTES_PER_HOUR_* constants.
+     * @param string       $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     */
+    public function setFanModeMinutesPerHour($mode, $serial_number = NULL) {
         $modes = explode(',', $mode);
         $mode = $modes[0];
         $duty_cycle = $modes[1];
-        return $this->_setFanMode($mode, $duty_cycle, null, $serial_number);
+        return $this->_setFanMode($mode, $duty_cycle, NULL, $serial_number);
     }
 
-    public function setFanModeOnWithTimer($mode, $serial_number=null) {
+    /**
+     * Set the thermostat-controlled fan to be ON using a timer.
+     *
+     * @param string|array $mode          One of the FAN_TIMER_* constants.
+     * @param string       $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     */
+    public function setFanModeOnWithTimer($mode, $serial_number = NULL) {
         $modes = explode(',', $mode);
         $mode = $modes[0];
         $timer = (int) $modes[1];
-        return $this->_setFanMode($mode, null, $timer, $serial_number);
+        return $this->_setFanMode($mode, NULL, $timer, $serial_number);
     }
 
-    public function cancelFanModeOnWithTimer($serial_number=null) {
+    /**
+     * Cancels the timer for the thermostat-controlled fan.
+     *
+     * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     */
+    public function cancelFanModeOnWithTimer($serial_number = NULL) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $data = json_encode(array('fan_timer_timeout' => 0));
         return $this->doPOST("/v2/put/device." . $serial_number, $data);
     }
 
-    public function setFanEveryDaySchedule($start_hour, $end_hour, $serial_number=null) {
+    /**
+     * Set the thermostat-controlled fan to run only between the specified hours.
+     *
+     * @param int    $start_hour    When the fan should start.
+     * @param int    $end_hour      When the fan should stop.
+     * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     */
+    public function setFanEveryDaySchedule($start_hour, $end_hour, $serial_number = NULL) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $data = json_encode(array('fan_duty_start_time' => $start_hour*3600, 'fan_duty_end_time' => $end_hour*3600));
         return $this->doPOST("/v2/put/device." . $serial_number, $data);
     }
 
-    public function turnOff($serial_number=null) {
+    /**
+     * Turn off the thermostat (no heating, cooling or fan).
+     *
+     * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     */
+    public function turnOff($serial_number = NULL) {
         return $this->setTargetTemperatureMode(TARGET_TEMP_MODE_OFF, 0, $serial_number);
     }
 
-    public function setAway($away, $serial_number=null) {
+    /**
+     * Change the location (structure) to away or present. Will also set the specified thermostat to use ECO temperatures, when setting Away mode.
+     *
+     * @param string $away_mode     AWAY_MODE_ON or AWAY_MODE_OFF
+     * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     */
+    public function setAway($away_mode, $serial_number = NULL) {
         $serial_number = $this->getDefaultSerial($serial_number);
-        $data = json_encode(array('away' => $away, 'away_timestamp' => time(), 'away_setter' => 0));
+        $data = json_encode(array('away' => $away_mode, 'away_timestamp' => time(), 'away_setter' => 0));
         $structure_id = $this->getDeviceInfo($serial_number)->location;
-        if ($away == AWAY_MODE_ON) {
+        if ($away_mode == AWAY_MODE_ON) {
             $this->setEcoMode(ECO_MODE_MANUAL, $serial_number);
         } else {
             $this->setEcoMode(ECO_MODE_SCHEDULE, $serial_number);
         }
         return $this->doPOST("/v2/put/structure." . $structure_id, $data);
     }
-    
-    public function setAutoAwayEnabled($enabled, $serial_number=null) {
+
+    /**
+     * Enable or disable Nest Sense Auto-Away.
+     *
+     * @param bool   $enabled       True to enable auto-away.
+     * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     */
+    public function setAutoAwayEnabled($enabled, $serial_number = NULL) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $data = json_encode(array('auto_away_enable' => $enabled));
         return $this->doPOST("/v2/put/device." . $serial_number, $data);
     }
 
-    public function setDualFuelBreakpoint($breakpoint, $serial_number=null) {
+    /**
+     * Change the dual-fuel breakpoint temperature.
+     *
+     * @param float|string $breakpoint    DUALFUEL_BREAKPOINT_ALWAYS_PRIMARY, DUALFUEL_BREAKPOINT_ALWAYS_ALT, or a temperature: thermostat will force usage of alt-heating when the outside temperature is below this value.
+     * @param string       $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     */
+    public function setDualFuelBreakpoint($breakpoint, $serial_number = NULL) {
         $serial_number = $this->getDefaultSerial($serial_number);
         if (!is_string($breakpoint)) {
             $breakpoint = $this->temperatureInCelsius($breakpoint, $serial_number);
@@ -548,16 +735,155 @@ class Nest {
         return $this->doPOST("/v2/put/device." . $serial_number, $data);
     }
 
-    public function enableHumidifier($enabled, $serial_number=null) {
+    /**
+     * Enable or disable Nest Sense Humidifier.
+     *
+     * @param bool   $enabled       True to enable auto-away.
+     * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     */
+    public function enableHumidifier($enabled, $serial_number = NULL) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $data = json_encode(array('target_humidity_enabled' => ((boolean)$enabled)));
         return $this->doPOST("/v2/put/device." . $serial_number, $data);
     }
 
-    public function setHumidity($humidity, $serial_number=null) {
+    /**
+     * Change the dual-fuel breakpoint temperature.
+     *
+     * @param float  $humidity      The target humidity value.
+     * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     */
+    public function setHumidity($humidity, $serial_number = NULL) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $data = json_encode(array('target_humidity' => ((double)$humidity)));
         return $this->doPOST("/v2/put/device." . $serial_number, $data);
+    }
+
+    /**
+     * Convert a temperature value from the device-prefered scale to Celsius.
+     *
+     * @param float  $temperature   The temperature to convert.
+     * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return float Temperature in Celsius.
+     */
+    public function temperatureInCelsius($temperature, $serial_number = NULL) {
+        $serial_number = $this->getDefaultSerial($serial_number);
+        $temp_scale = $this->getDeviceTemperatureScale($serial_number);
+        if ($temp_scale == 'F') {
+            return ($temperature - 32) / 1.8;
+        }
+        return $temperature;
+    }
+
+    /**
+     * Convert a temperature value from Celsius to the device-preferred scale.
+     *
+     * @param float  $temperature_in_celsius The temperature to convert.
+     * @param string $serial_number          The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return float Temperature in device-preferred scale.
+     */
+    public function temperatureInUserScale($temperature_in_celsius, $serial_number = NULL) {
+        $serial_number = $this->getDefaultSerial($serial_number);
+        $temp_scale = $this->getDeviceTemperatureScale($serial_number);
+        if ($temp_scale == 'F') {
+            return ($temperature_in_celsius * 1.8) + 32;
+        }
+        return $temperature_in_celsius;
+    }
+
+    /**
+     * Get the thermostat preferred scale: Celsius or Fahrenheit.
+     *
+     * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return string 'F' or 'C'
+     */
+    public function getDeviceTemperatureScale($serial_number = NULL) {
+        $serial_number = $this->getDefaultSerial($serial_number);
+        return $this->last_status->device->{$serial_number}->temperature_scale;
+    }
+
+    /**
+     * Get all the devices of a specific type from the user's account.
+     *
+     * @param string $type DEVICE_TYPE_THERMOSTAT or DEVICE_TYPE_PROTECT.
+     *
+     * @return array Devices
+     */
+    public function getDevices($type = DEVICE_TYPE_THERMOSTAT) {
+        $this->prepareForGet();
+        if ($type == DEVICE_TYPE_PROTECT) {
+            $protects = array();
+            $topaz = isset($this->last_status->topaz) ? $this->last_status->topaz : array();
+            foreach ($topaz as $protect) {
+                $protects[] = $protect->serial_number;
+            }
+            return $protects;
+        }
+        $devices_serials = array();
+        foreach ($this->last_status->user->{$this->userid}->structures as $structure) {
+            list(, $structure_id) = explode('.', $structure);
+            foreach ($this->last_status->structure->{$structure_id}->devices as $device) {
+                list(, $device_serial) = explode('.', $device);
+                $devices_serials[] = $device_serial;
+            }
+        }
+        return $devices_serials;
+    }
+
+    /**
+     * Either return the parameter as-is, or, if empty, return the serial number of the first device found in the user's account.
+     *
+     * @param string $serial_number Serial number will be returned, if specified.
+     *
+     * @return string Serial number of the first defined device.
+     */
+    protected function getDefaultSerial($serial_number) {
+        if (empty($serial_number)) {
+            $devices_serials = $this->getDevices();
+            if (count($devices_serials) == 0) {
+                $devices_serials = $this->getDevices(DEVICE_TYPE_PROTECT);
+            }
+            $serial_number = $devices_serials[0];
+        }
+        return $serial_number;
+    }
+
+    /**
+     * Return the device information for the default device.
+     *
+     * @return stdClass
+     */
+    public function getDefaultDevice() {
+        $serial_number = $this->getDefaultSerial(NULL);
+        return $this->last_status->device->{$serial_number};
+    }
+
+    /**
+     * Get the specified device network information.
+     *
+     * @param string $serial_number The device (thermostat or protect) serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass
+     */
+    protected function getDeviceNetworkInfo($serial_number = NULL) {
+        $this->prepareForGet();
+        $serial_number = $this->getDefaultSerial($serial_number);
+        $connection_info = $this->last_status->track->{$serial_number};
+        return (object) array(
+            'online' => $connection_info->online,
+            'last_connection' => date(DATETIME_FORMAT, $connection_info->last_connection/1000),
+            'last_connection_UTC' => gmdate(DATETIME_FORMAT, $connection_info->last_connection/1000),
+            'wan_ip' => @$connection_info->last_ip,
+            'local_ip' => $this->last_status->device->{$serial_number}->local_ip,
+            'mac_address' => $this->last_status->device->{$serial_number}->mac_address
+        );
     }
 
     /* Helper functions */
@@ -566,7 +892,7 @@ class Nest {
         unset($this->last_status);
     }
 
-    public function getStatus($retry=TRUE) {
+    public function getStatus($retry = TRUE) {
         $url = "/v3/mobile/" . $this->user;
         $status = $this->doGET($url);
         if (!is_object($status)) {
@@ -591,81 +917,7 @@ class Nest {
         return $device_id;
     }
 
-    public function temperatureInCelsius($temperature, $serial_number=null) {
-        $serial_number = $this->getDefaultSerial($serial_number);
-        $temp_scale = $this->getDeviceTemperatureScale($serial_number);
-        if ($temp_scale == 'F') {
-            return ($temperature - 32) / 1.8;
-        }
-        return $temperature;
-    }
-
-    public function temperatureInUserScale($temperature_in_celsius, $serial_number=null) {
-        $serial_number = $this->getDefaultSerial($serial_number);
-        $temp_scale = $this->getDeviceTemperatureScale($serial_number);
-        if ($temp_scale == 'F') {
-            return ($temperature_in_celsius * 1.8) + 32;
-        }
-        return $temperature_in_celsius;
-    }
-
-    public function getDeviceTemperatureScale($serial_number=null) {
-        $serial_number = $this->getDefaultSerial($serial_number);
-        return $this->last_status->device->{$serial_number}->temperature_scale;
-    }
-
-    public function getDevices($type=DEVICE_TYPE_THERMOSTAT) {
-        $this->prepareForGet();
-        if ($type == DEVICE_TYPE_PROTECT) {
-            $protects = array();
-            $topaz = isset($this->last_status->topaz) ? $this->last_status->topaz : array();
-            foreach ($topaz as $protect) {
-                $protects[] = $protect->serial_number;
-            }
-            return $protects;
-        }
-        $devices_serials = array();
-        foreach ($this->last_status->user->{$this->userid}->structures as $structure) {
-            list(, $structure_id) = explode('.', $structure);
-            foreach ($this->last_status->structure->{$structure_id}->devices as $device) {
-                list(, $device_serial) = explode('.', $device);
-                $devices_serials[] = $device_serial;
-            }
-        }
-        return $devices_serials;
-    }
-
-    protected function getDefaultSerial($serial_number) {
-        if (empty($serial_number)) {
-            $devices_serials = $this->getDevices();
-            if (count($devices_serials) == 0) {
-                $devices_serials = $this->getDevices(DEVICE_TYPE_PROTECT);
-            }
-            $serial_number = $devices_serials[0];
-        }
-        return $serial_number;
-    }
-
-    public function getDefaultDevice() {
-        $serial_number = $this->getDefaultSerial(null);
-        return $this->last_status->device->{$serial_number};
-    }
-
-    protected function getDeviceNetworkInfo($serial_number=null) {
-        $this->prepareForGet();
-        $serial_number = $this->getDefaultSerial($serial_number);
-        $connection_info = $this->last_status->track->{$serial_number};
-        return (object) array(
-            'online' => $connection_info->online,
-            'last_connection' => date(DATETIME_FORMAT, $connection_info->last_connection/1000),
-            'last_connection_UTC' => gmdate(DATETIME_FORMAT, $connection_info->last_connection/1000),
-            'wan_ip' => @$connection_info->last_ip,
-            'local_ip' => $this->last_status->device->{$serial_number}->local_ip,
-            'mac_address' => $this->last_status->device->{$serial_number}->mac_address
-        );
-    }
-
-    protected function _setFanMode($mode, $fan_duty_cycle=null, $timer=null, $serial_number=null) {
+    protected function _setFanMode($mode, $fan_duty_cycle = NULL, $timer = NULL, $serial_number = NULL) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $data = array();
         if (!empty($mode)) {
@@ -692,7 +944,7 @@ class Nest {
             // No need to login; we'll use cached values for authentication.
             return;
         }
-        $result = $this->doPOST(self::login_url, array('username' => $this->username, 'password' => $this->password));
+        $result = $this->doPOST(self::LOGIN_URL, array('username' => $this->username, 'password' => $this->password));
         if (!isset($result->urls)) {
             die("Error: Response to login request doesn't contain required transport URL. Response: '" . var_export($result, TRUE) . "'\n");
         }
@@ -707,13 +959,13 @@ class Nest {
     protected function use_cache() {
         return file_exists($this->cookie_file) && file_exists($this->cache_file) && !empty($this->cache_expiration) && $this->cache_expiration > time();
     }
-    
+
     protected function loadCache() {
         if (!file_exists($this->cache_file)) {
             return;
         }
         $vars = @unserialize(file_get_contents($this->cache_file));
-        if ($vars === false) {
+        if ($vars === FALSE) {
             return;
         }
         $this->transport_url = $vars['transport_url'];
@@ -724,7 +976,7 @@ class Nest {
         // Let's not load this from the disk cache; otherwise, prepareForGet() would always skip getStatus()
         // $this->last_status = $vars['last_status'];
     }
-    
+
     protected function saveCache() {
         $vars = array(
             'transport_url' => $this->transport_url,
@@ -737,31 +989,62 @@ class Nest {
         file_put_contents($this->cache_file, serialize($vars));
     }
 
+    /**
+     * Send a GET HTTP request.
+     *
+     * @param string $url URL
+     *
+     * @return stdClass|bool JSON-decoded object, or boolean if no response was returned.
+     *
+     * @throws RuntimeException
+     */
     protected function doGET($url) {
         return $this->doRequest('GET', $url);
     }
-    
+
+    /**
+     * Send a POST HTTP request.
+     *
+     * @param string       $url         URL
+     * @param array|string $data_fields Data to send via POST.
+     *
+     * @return stdClass|bool JSON-decoded object, or boolean if no response was returned.
+     *
+     * @throws RuntimeException
+     */
     protected function doPOST($url, $data_fields) {
         return $this->doRequest('POST', $url, $data_fields);
     }
 
-    protected function doRequest($method, $url, $data_fields=null, $with_retry=TRUE) {
+    /**
+     * Send a HTTP request.
+     *
+     * @param string       $method      HTTP method: GET or POST
+     * @param string       $url         URL
+     * @param array|string $data_fields Data to send via POST.
+     * @param bool         $with_retry  Retry if request fails?
+     *
+     * @return stdClass|bool JSON-decoded object, or boolean if no response was returned.
+     *
+     * @throws RuntimeException
+     */
+    protected function doRequest($method, $url, $data_fields = NULL, $with_retry = TRUE) {
         $ch = curl_init();
         if ($url[0] == '/') {
             $url = $this->transport_url . $url;
         }
-        $headers = array('X-nl-protocol-version: ' . self::protocol_version);
+        $headers = array('X-nl-protocol-version: ' . self::PROTOCOL_VERSION);
         if (isset($this->userid)) {
             $headers[] = 'X-nl-user-id: ' . $this->userid;
             $headers[] = 'Authorization: Basic ' . $this->access_token;
         }
         if (is_array($data_fields)) {
             $data = array();
-            foreach($data_fields as $k => $v) {
+            foreach ($data_fields as $k => $v) {
                 $data[] = "$k=" . urlencode($v);
             }
             $data = implode('&', $data);
-        } else if (is_string($data_fields)) {
+        } elseif (is_string($data_fields)) {
             $data = $data_fields;
         }
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -769,10 +1052,13 @@ class Nest {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
         curl_setopt($ch, CURLOPT_HEADER, FALSE);
         curl_setopt($ch, CURLOPT_AUTOREFERER, TRUE);
-        curl_setopt($ch, CURLOPT_USERAGENT, self::user_agent); 
+        curl_setopt($ch, CURLOPT_USERAGENT, self::USER_AGENT);
         curl_setopt($ch, CURLOPT_COOKIEJAR, $this->cookie_file);
         curl_setopt($ch, CURLOPT_COOKIEFILE, $this->cookie_file);
         if ($method == 'POST') {
+            if (!isset($data)) {
+                throw new RuntimeException("Error: You need to specify \$data when sending a POST.");
+            }
             curl_setopt($ch, CURLOPT_POST, TRUE);
             curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
             $headers[] = 'Content-length: ' . strlen($data);
@@ -786,7 +1072,7 @@ class Nest {
         $curl_cainfo = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'cacert.pem';
         $last_month = time()-30*24*60*60;
         if (!file_exists($curl_cainfo) || filemtime($curl_cainfo) < $last_month || filesize($curl_cainfo) < 100000) {
-            $certs = static::get_curl_certs();
+            $certs = static::getCURLCerts();
             if ($certs) {
                 file_put_contents($curl_cainfo, $certs);
             }
@@ -796,7 +1082,7 @@ class Nest {
         }
         $response = curl_exec($ch);
         $info = curl_getinfo($ch);
-        
+
         if ($info['http_code'] == 401 || (!$response && curl_errno($ch) != 0)) {
             if ($with_retry && $this->use_cache()) {
                 // Received 401, and was using cached data; let's try to re-login and retry.
@@ -810,9 +1096,9 @@ class Nest {
                 throw new RuntimeException("Error: HTTP request to $url returned an error: " . curl_error($ch), curl_errno($ch));
             }
         }
-        
+
         $json = json_decode($response);
-        if (!is_object($json) && ($method == 'GET' || $url == self::login_url)) {
+        if (!is_object($json) && ($method == 'GET' || $url == self::LOGIN_URL)) {
             if (strpos($response, "currently performing maintenance on your Nest account") !== FALSE) {
                 throw new RuntimeException("Error: Account is under maintenance; API temporarily unavailable.", NESTAPI_ERROR_UNDER_MAINTENANCE);
             }
@@ -836,8 +1122,13 @@ class Nest {
 
         return $json;
     }
-    
-    protected static function get_curl_certs() {
+
+    /**
+     * Get latest CA certs from curl.haxx.se
+     *
+     * @return string
+     */
+    protected static function getCURLCerts() {
         $url = 'https://curl.haxx.se/ca/cacert.pem';
         $certs = @file_get_contents($url);
         if (!$certs) {
@@ -856,7 +1147,14 @@ class Nest {
         return $certs;
     }
 
-    protected static function secure_touch($fname) {
+    /**
+     * Create a temporary file in the system temp folder.
+     *
+     * @param string $fname Filename
+     *
+     * @return void
+     */
+    protected static function secureTouch($fname) {
         if (file_exists($fname)) {
             return;
         }
