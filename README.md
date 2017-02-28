@@ -128,3 +128,7 @@ Acknowledgements
     for http://code.google.com/p/jnest/
 - Aaron Cornelius
     for http://www.wiredprairie.us/blog/index.php/archives/1442
+
+Developed mainly using a free open-source license of  
+![PHPStorm](https://d3uepj124s5rcx.cloudfront.net/items/0V0z2p0e0K1D0F3t2r1P/logo_PhpStorm.png)  
+kindly provided by [JetBrains](http://www.jetbrains.com/). Thanks guys!
