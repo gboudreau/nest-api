@@ -457,7 +457,7 @@ class Nest
      * Change the thermostat target mode and temperature
      *
      * @param string      $mode          One of the TARGET_TEMP_MODE_* constants.
-     * @param float|array $temperature   Target temperature; specify a float when setting $mode = TARGET_TEMP_MODE_HEAT or TARGET_TEMP_MODE_COLD, and a array of two float values when setting $mode = TARGET_TEMP_MODE_RANGE. Not needed when setting $mode = TARGET_TEMP_MODE_OFF.
+     * @param float|array $temperature   Target temperature; specify a float when setting $mode = TARGET_TEMP_MODE_HEAT or TARGET_TEMP_MODE_COLD, and a array of two float values when setting $mode = TARGET_TEMP_MODE_RANGE. Not needed when setting $mode = TARGET_TEMP_MODE_OFF. Send NULL if you want to keep the previous temperature(s) value(s).
      * @param string      $serial_number The thermostat serial number. Defaults to the first device of the account.
      *
      * @return stdClass|bool The object returned by the API call, or FALSE on error.
@@ -465,24 +465,26 @@ class Nest
     public function setTargetTemperatureMode($mode, $temperature = NULL, $serial_number = NULL) {
         $serial_number = $this->getDefaultSerial($serial_number);
 
-        if ($mode == TARGET_TEMP_MODE_RANGE) {
-            if (!is_array($temperature) || count($temperature) != 2 || !is_numeric($temperature[0]) || !is_numeric($temperature[1])) {
-                echo "Error: when using TARGET_TEMP_MODE_RANGE, you need to set the target temperatures (second argument of setTargetTemperatureMode) using an array of two numeric values.\n";
-                return FALSE;
+        if ($temperature !== NULL) {
+            if ($mode == TARGET_TEMP_MODE_RANGE) {
+                if (!is_array($temperature) || count($temperature) != 2 || !is_numeric($temperature[0]) || !is_numeric($temperature[1])) {
+                    echo "Error: when using TARGET_TEMP_MODE_RANGE, you need to set the target temperatures (second argument of setTargetTemperatureMode) using an array of two numeric values.\n";
+                    return FALSE;
+                }
+                $temp_low = $this->temperatureInCelsius($temperature[0], $serial_number);
+                $temp_high = $this->temperatureInCelsius($temperature[1], $serial_number);
+                $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature_low' => $temp_low, 'target_temperature_high' => $temp_high));
+                $set_temp_result = $this->doPOST("/v2/put/shared." . $serial_number, $data);
+            } elseif ($mode != TARGET_TEMP_MODE_OFF) {
+                // heat or cool
+                if (!is_numeric($temperature)) {
+                    echo "Error: when using TARGET_TEMP_MODE_HEAT or TARGET_TEMP_MODE_COLD, you need to set the target temperature (second argument of setTargetTemperatureMode) using an numeric value.\n";
+                    return FALSE;
+                }
+                $temperature = $this->temperatureInCelsius($temperature, $serial_number);
+                $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature' => $temperature));
+                $set_temp_result = $this->doPOST("/v2/put/shared." . $serial_number, $data);
             }
-            $temp_low = $this->temperatureInCelsius($temperature[0], $serial_number);
-            $temp_high = $this->temperatureInCelsius($temperature[1], $serial_number);
-            $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature_low' => $temp_low, 'target_temperature_high' => $temp_high));
-            $set_temp_result = $this->doPOST("/v2/put/shared." . $serial_number, $data);
-        } elseif ($mode != TARGET_TEMP_MODE_OFF) {
-            // heat or cool
-            if (!is_numeric($temperature)) {
-                echo "Error: when using TARGET_TEMP_MODE_HEAT or TARGET_TEMP_MODE_COLD, you need to set the target temperature (second argument of setTargetTemperatureMode) using an numeric value.\n";
-                return FALSE;
-            }
-            $temperature = $this->temperatureInCelsius($temperature, $serial_number);
-            $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature' => $temperature));
-            $set_temp_result = $this->doPOST("/v2/put/shared." . $serial_number, $data);
         }
 
         $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature_type' => $mode));
