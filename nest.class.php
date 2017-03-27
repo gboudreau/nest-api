@@ -144,8 +144,8 @@ class Nest
         }
 
         return (object) array(
-            'outside_temperature' => isset($weather->now) ? $this->temperatureInUserScale((float) $weather->now->current_temperature) : NULL,
-            'outside_humidity'    => isset($weather->now) ? $weather->now->current_humidity : NULL
+            'outside_temperature' => isset($weather->now->current_temperature) ? $this->temperatureInUserScale((float) $weather->now->current_temperature) : NULL,
+            'outside_humidity'    => isset($weather->now->current_humidity) ? $weather->now->current_humidity : NULL
         );
     }
 
