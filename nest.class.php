@@ -542,19 +542,6 @@ class Nest
     }
 
     /**
-     * Change the thermostat ECO temperatures.
-     *
-     * @param float  $temp_low      ECO low temperature.
-     * @param float  $temp_high     ECO high temperature.
-     * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
-     *
-     * @return stdClass|bool The object returned by the API call, or FALSE on error.
-     */
-    public function setEcoTemperatures($temp_low, $temp_high, $serial_number = NULL) {
-        return $this->setAwayTemperatures($temp_low, $temp_high, $serial_number);
-    }
-
-    /**
      * Change the thermostat away temperatures. This method is an alias for setEcoTemperatures().
      *
      * @param float  $temp_low      Away low temperature.
@@ -562,19 +549,35 @@ class Nest
      * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
      *
      * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     *
+     * @deprecated
+     * @see Nest::setEcoTemperatures()
      */
     public function setAwayTemperatures($temp_low, $temp_high, $serial_number = NULL) {
+        return $this->setEcoTemperatures($temp_low, $temp_high, $serial_number);
+    }
+
+    /**
+     * Change the thermostat ECO temperatures.
+     *
+     * @param float|bool $temp_low      ECO low temperature. Use FALSE to turn it Off (only the safety minimum temperature will apply).
+     * @param float|bool $temp_high     ECO high temperature. Use FALSE to turn it Off (only the safety maximum temperature will apply).
+     * @param string     $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     */
+    public function setEcoTemperatures($temp_low, $temp_high, $serial_number = NULL) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $temp_low = $this->temperatureInCelsius($temp_low, $serial_number);
         $temp_high = $this->temperatureInCelsius($temp_high, $serial_number);
         $data = array();
-        if ($temp_low === FALSE || $temp_low < 4) {
+        if ($temp_low === FALSE) {
             $data['away_temperature_low_enabled'] = FALSE;
         } elseif ($temp_low != NULL) {
             $data['away_temperature_low_enabled'] = TRUE;
             $data['away_temperature_low'] = $temp_low;
         }
-        if ($temp_high === FALSE || $temp_high > 32) {
+        if ($temp_high === FALSE) {
             $data['away_temperature_high_enabled'] = FALSE;
         } elseif ($temp_high != NULL) {
             $data['away_temperature_high_enabled'] = TRUE;
