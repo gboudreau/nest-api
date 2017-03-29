@@ -705,14 +705,29 @@ class Nest
     }
 
     /**
-     * Enable or disable Nest Sense Auto-Away.
+     * (Deprecated) Enable or disable Nest Sense Auto-Away.
      *
      * @param bool   $enabled       True to enable auto-away.
      * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
      *
      * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     *
+     * @deprecated Nest Sense Auto-Away is not available anymore. This now controls if the thermostat should use Eco temperatures if it detects you are away.
+     * @see        Nest::useEcoTempWhenAway()
      */
     public function setAutoAwayEnabled($enabled, $serial_number = NULL) {
+        return $this->useEcoTempWhenAway($enabled, $serial_number);
+    }
+
+    /**
+     * Enable or disable using Eco temperatures when you're Away.
+     *
+     * @param bool   $enabled       True to enable Eco temperatures when Away.
+     * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     */
+    public function useEcoTempWhenAway($enabled, $serial_number = NULL) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $data = json_encode(array('auto_away_enable' => $enabled));
         return $this->doPOST("/v2/put/device." . $serial_number, $data);
