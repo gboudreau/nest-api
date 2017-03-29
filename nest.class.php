@@ -542,7 +542,7 @@ class Nest
     }
 
     /**
-     * Change the thermostat away temperatures. This method is an alias for setEcoTemperatures().
+     * (Deprecated) Change the thermostat away temperatures. This method is an alias for setEcoTemperatures().
      *
      * @param float  $temp_low      Away low temperature.
      * @param float  $temp_high     Away high temperature.
@@ -551,7 +551,7 @@ class Nest
      * @return stdClass|bool The object returned by the API call, or FALSE on error.
      *
      * @deprecated
-     * @see Nest::setEcoTemperatures()
+     * @see        Nest::setEcoTemperatures()
      */
     public function setAwayTemperatures($temp_low, $temp_high, $serial_number = NULL) {
         return $this->setEcoTemperatures($temp_low, $temp_high, $serial_number);
@@ -688,18 +688,19 @@ class Nest
     }
 
     /**
-     * Change the location (structure) to away or present. Will also set the specified thermostat to use ECO temperatures, when setting Away mode.
+     * Change the location (structure) to away or present. Can also set the specified thermostat to use ECO temperatures, when enabling Away mode.
      *
      * @param string $away_mode     AWAY_MODE_ON or AWAY_MODE_OFF
      * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+     * @param bool   $eco_when_away Specify if you want to use Eco temperatures or not, when using AWAY_MODE_ON. Default to TRUE.
      *
      * @return stdClass|bool The object returned by the API call, or FALSE on error.
      */
-    public function setAway($away_mode, $serial_number = NULL) {
+    public function setAway($away_mode, $serial_number = NULL, $eco_when_away = TRUE) {
         $serial_number = $this->getDefaultSerial($serial_number);
         $data = json_encode(array('away' => $away_mode, 'away_timestamp' => time(), 'away_setter' => 0));
         $structure_id = $this->getDeviceInfo($serial_number)->location;
-        if ($away_mode == AWAY_MODE_ON) {
+        if ($away_mode == AWAY_MODE_ON && $eco_when_away) {
             $this->setEcoMode(ECO_MODE_MANUAL, $serial_number);
         } else {
             $this->setEcoMode(ECO_MODE_SCHEDULE, $serial_number);
