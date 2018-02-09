@@ -4,7 +4,7 @@
     "description": "This is a simple library that will allow you to monitor and control your Nest Learning Thermostat, and Nest Protect.",
     "keywords": ["api","nest"],
     "homepage": "https://github.com/gboudreau/nest-api",
-    "license": "GPLv3",
+    "license": "GPL-3.0-or-later",
     "authors": [
         {
             "name": "Guillaume Boudreau",
