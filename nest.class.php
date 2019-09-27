@@ -168,6 +168,9 @@ class Nest
                     $protects[] = $protect->serial_number;
                 }
             }
+            if (empty($protects) && empty($structure->devices)) {
+                continue;
+            }
 
             $weather_data = $this->getWeather($structure->postal_code, $structure->country_code);
             $user_structures[] = (object) array(
