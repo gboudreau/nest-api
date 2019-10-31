@@ -47,11 +47,15 @@ See examples.php for details, but here's a Quick Start.
 
 require_once('nest.class.php');
 
-// Your Nest username and password.
-define('USERNAME', 'you@gmail.com');
-define('PASSWORD', 'Something other than 1234 right?');
+// Use a Nest account:
+$username = 'you@gmail.com';
+$pasword = 'Something other than 1234 right?';
+$nest = new Nest($username, $pasword);
 
-$nest = new Nest();
+// Or use a Google account (see instructions below on how to find those values):
+$issue_token = 'https://accounts.google.com/o/oauth2/iframerpc?action=issueToken&response_type=token%20id_token&login_hint=UNIQUE_VALUE_HERE&client_id=733249279899-44tchle2kaa9afr5v9ov7jbuojfr9lrq.apps.googleusercontent.com&origin=https%3A%2F%2Fhome.nest.com&scope=openid%20profile%20email%20https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fnest-account&ss_domain=https%3A%2F%2Fhome.nest.com';
+$cookies = '#YOUR_COOKIES_HERE#'; // All on one line; remove any new-line character you might have
+$nest = new Nest(NULL, NULL, $issue_token, $cookies);
 
 // Get the device information:
 $infos = $nest->getDeviceInfo();
@@ -107,6 +111,21 @@ Example output for `getDeviceInfo()`:
 }
 ```
 
+Using a Google Account
+----------------------
+The values of `$issue_token`, and `$cookies` are specific to your Google Account. To get them, follow these steps (only needs to be done once, as long as you stay logged into your Google Account).
+
+- Open a Chrome browser tab in Incognito Mode (or clear your cache).
+- Open Developer Tools (View/Developer/Developer Tools).
+- Click on `Network` tab. Make sure `Preserve Log` is checked.
+- In the `Filter` box, enter `issueToken`
+- Go to https://home.nest.com, and click `Sign in with Google`. Log into your account.
+- One network call (beginning with `iframerpc`) will appear in the Dev Tools window. Click on it.
+- In the `Headers` tab, under `General`, copy the entire `Request URL` (beginning with `https://accounts.google.com`, ending with `nest.com`). This is your `$issue_token`.
+- In the `Filter` box, enter `oauth2/iframe`
+- Several network calls will appear in the Dev Tools window. Click on the last iframe call.
+- In the `Headers` tab, under `Request Headers`, copy the entire cookie value (include the whole string which is several lines long and has many field/value pairs - do not include the `Cookie:` prefix). This is your `$cookies`; make sure all of it is on a single line.
+
 Troubleshooting
 ---------------
 If you have any issues, try adding this at the top of your PHP script, to ask PHP to echo all errors and warnings.
@@ -118,6 +137,10 @@ error_reporting(E_ALL);
 Acknowledgements
 ----------------
 
+- Jacob McSwain, https://github.com/USA-RedDragon
+    for https://github.com/USA-RedDragon/badnest
+- Chris J. Shull, https://github.com/chrisjshull
+    for https://github.com/chrisjshull/homebridge-nest/
 - Andy Blyler, http://andyblyler.com/
     for https://github.com/ablyler/nest-php-api
 - Scott M Baker, http://www.smbaker.com/
@@ -129,6 +152,4 @@ Acknowledgements
 - Aaron Cornelius
     for http://www.wiredprairie.us/blog/index.php/archives/1442
 
-Developed mainly using a free open-source license of  
-![PHPStorm](https://d3uepj124s5rcx.cloudfront.net/items/0V0z2p0e0K1D0F3t2r1P/logo_PhpStorm.png)  
-kindly provided by [JetBrains](http://www.jetbrains.com/). Thanks guys!
+Developed mainly using a free open-source license of PHPStorm kindly provided by [JetBrains](http://www.jetbrains.com/). Thanks guys!

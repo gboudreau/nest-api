@@ -92,30 +92,43 @@ class Nest
     /**
      * Constructor
      *
-     * @param string|null $username Your Nest username.
-     * @param string|null $password Your Nest password.
+     * @param string|null $username    Your Nest username.
+     * @param string|null $password    Your Nest password.
+     * @param string|null $issue_token Issue-token URL
+     * @param string|null $cookies     Google cookies
      */
-    public function __construct($username = NULL, $password = NULL) {
-        if ($username === NULL && defined('USERNAME')) {
-            $username = USERNAME;
-        }
-        if ($password === NULL && defined('PASSWORD')) {
-            $password = PASSWORD;
-        }
-        if ($username === NULL || $password === NULL) {
-            throw new InvalidArgumentException('Nest credentials were not provided.');
-        }
-        $this->username = $username;
-        $this->password = $password;
+    public function __construct($username = NULL, $password = NULL, $issue_token = NULL, $cookies = NULL) {
+        if (!empty($issue_token)) {
+            $this->issue_token = $issue_token;
+            if (empty($cookies)) {
+                throw new InvalidArgumentException('Google login requires issue_token and cookie.');
+            }
+            $this->cookies = $cookies;
 
-        $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . md5($username . $password);
+            $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . md5($this->issue_token);
+            $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . md5($this->issue_token);
+        } else {
+            if ($username === NULL && defined('USERNAME')) {
+                $username = USERNAME;
+            }
+            if ($password === NULL && defined('PASSWORD')) {
+                $password = PASSWORD;
+            }
+            if ($username === NULL || $password === NULL) {
+                throw new InvalidArgumentException('Nest credentials were not provided.');
+            }
+            $this->username = $username;
+            $this->password = $password;
+
+            $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . md5($username . $password);
+            $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . md5($username . $password);
+        }
+
         static::secureTouch($this->cookie_file);
-
-        $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . md5($username . $password);
+        static::secureTouch($this->cache_file);
 
         // Attempt to load the cache
         $this->loadCache();
-        static::secureTouch($this->cache_file);
 
         // Log in, if needed
         $this->login();
@@ -182,7 +195,7 @@ class Nest
                 'outside_temperature' => $weather_data->outside_temperature,
                 'outside_humidity' => $weather_data->outside_humidity,
                 'away' => $structure->away,
-                'away_last_changed' => date(DATETIME_FORMAT, $structure->away_timestamp),
+                'away_last_changed' => !empty($structure->away_timestamp) ? date(DATETIME_FORMAT, $structure->away_timestamp) : NULL,
                 'thermostats' => array_map(array($class_name, 'cleanDevices'), $structure->devices),
                 'protects' => $protects,
             );
@@ -968,15 +981,75 @@ class Nest
             // No need to login; we'll use cached values for authentication.
             return;
         }
-        $result = $this->doPOST(self::LOGIN_URL, array('username' => $this->username, 'password' => $this->password));
-        if (!isset($result->urls)) {
-            die("Error: Response to login request doesn't contain required transport URL. Response: '" . var_export($result, TRUE) . "'\n");
+        if (!empty($this->issue_token)) {
+            // Get a Bearer token using the Google cookies and issue_token
+            $headers = [
+                'Sec-Fetch-Mode: cors',
+                'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36',
+                'X-Requested-With: XmlHttpRequest',
+                'Referer: https://accounts.google.com/o/oauth2/iframe',
+                'Cookie: ' . $this->cookies,
+            ];
+            $result = $this->doGET($this->issue_token, $headers);
+            if (!isset($result->access_token)) {
+                die("Error: Response to login request doesn't contain required access token. Response: '" . var_export($result, TRUE) . "'\n");
+            }
+
+            // Use Bearer token to get an access token, and user ID
+            $headers = [
+                'Authorization: Bearer ' . $result->access_token,
+                'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36',
+                'X-Goog-API-Key: AIzaSyAdkSIMNc51XGNEAYWasX9UOWkS5P6sZE4', // Nest website's (public) API key,
+                'Referer: https://home.nest.com',
+            ];
+            $params = [
+                'embed_google_oauth_access_token' => TRUE,
+                'expire_after' => '3600s',
+                'google_oauth_access_token' => $result->access_token,
+                'policy_id' => 'authproxy-oauth-policy',
+            ];
+            $result = $this->doPOST("https://nestauthproxyservice-pa.googleapis.com/v1/issue_jwt", $params, $headers);
+            if (empty($result->claims->subject->nestId->id)) {
+                die("Error: Response to login request doesn't contain required User ID. Response: '" . var_export($result, TRUE) . "'\n");
+            }
+            if (empty($result->jwt)) {
+                die("Error: Response to login request doesn't contain required access token. Response: '" . var_export($result, TRUE) . "'\n");
+            }
+            $this->userid = $result->claims->subject->nestId->id;
+            $this->access_token = $result->jwt;
+            $this->cache_expiration = strtotime($result->claims->expirationTime);
+
+            // Get user
+            $params = [
+                'known_bucket_types' => ["user"],
+                'known_bucket_versions' => [],
+            ];
+            $result = $this->doPOST("https://home.nest.com/api/0.1/user/{$this->userid}/app_launch", json_encode($params), ['Content-type: text/json']);
+            if (empty($result->service_urls->urls->transport_url)) {
+                die("Error: Response to login request doesn't contain required transport_url. Response: '" . var_export($result, TRUE) . "'\n");
+            }
+            $this->transport_url = $result->service_urls->urls->transport_url;
+
+            foreach ($result->updated_buckets as $bucket) {
+                if (strpos($bucket->object_key, 'user.') === 0) {
+                    $this->user = $bucket->object_key;
+                    break;
+                }
+            }
+            if (empty($this->user)) {
+                $this->user = "user.{$this->userid}"; // meh; no need to get it from API; it's simple enough!
+            }
+        } else {
+            $result = $this->doPOST(self::LOGIN_URL, array('username' => $this->username, 'password' => $this->password));
+            if (!isset($result->urls)) {
+                die("Error: Response to login request doesn't contain required transport URL. Response: '" . var_export($result, TRUE) . "'\n");
+            }
+            $this->transport_url = $result->urls->transport_url;
+            $this->access_token = $result->access_token;
+            $this->userid = $result->userid;
+            $this->user = $result->user;
+            $this->cache_expiration = strtotime($result->expires_in);
         }
-        $this->transport_url = $result->urls->transport_url;
-        $this->access_token = $result->access_token;
-        $this->userid = $result->userid;
-        $this->user = $result->user;
-        $this->cache_expiration = strtotime($result->expires_in);
         $this->saveCache();
     }
 
@@ -1016,14 +1089,15 @@ class Nest
     /**
      * Send a GET HTTP request.
      *
-     * @param string $url URL
+     * @param string $url     URL
+     * @param array  $headers HTTP headers
      *
      * @return stdClass|bool JSON-decoded object, or boolean if no response was returned.
      *
      * @throws RuntimeException
      */
-    protected function doGET($url) {
-        return $this->doRequest('GET', $url);
+    protected function doGET($url, $headers = []) {
+        return $this->doRequest('GET', $url, NULL, TRUE, $headers);
     }
 
     /**
@@ -1031,13 +1105,14 @@ class Nest
      *
      * @param string       $url         URL
      * @param array|string $data_fields Data to send via POST.
+     * @param array        $headers     HTTP headers
      *
      * @return stdClass|bool JSON-decoded object, or boolean if no response was returned.
      *
      * @throws RuntimeException
      */
-    protected function doPOST($url, $data_fields) {
-        return $this->doRequest('POST', $url, $data_fields);
+    protected function doPOST($url, $data_fields, $headers = []) {
+        return $this->doRequest('POST', $url, $data_fields, TRUE, $headers);
     }
 
     /**
@@ -1047,17 +1122,18 @@ class Nest
      * @param string       $url         URL
      * @param array|string $data_fields Data to send via POST.
      * @param bool         $with_retry  Retry if request fails?
+     * @param array        $headers     HTTP headers
      *
      * @return stdClass|bool JSON-decoded object, or boolean if no response was returned.
      *
      * @throws RuntimeException
      */
-    protected function doRequest($method, $url, $data_fields = NULL, $with_retry = TRUE) {
+    protected function doRequest($method, $url, $data_fields = NULL, $with_retry = TRUE, $headers = []) {
         $ch = curl_init();
         if ($url[0] == '/') {
             $url = $this->transport_url . $url;
         }
-        $headers = array('X-nl-protocol-version: ' . self::PROTOCOL_VERSION);
+        $headers[] = 'X-nl-protocol-version: ' . self::PROTOCOL_VERSION;
         if (isset($this->userid)) {
             $headers[] = 'X-nl-user-id: ' . $this->userid;
             $headers[] = 'Authorization: Basic ' . $this->access_token;
@@ -1088,6 +1164,7 @@ class Nest
             $headers[] = 'Content-length: ' . strlen($data);
         }
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, TRUE); // for security this should always be set to true.
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);    // for security this should always be set to 2.
         curl_setopt($ch, CURLOPT_SSLVERSION, 1);        // Nest servers now require TLSv1; won't work with SSLv2 or even SSLv3!
