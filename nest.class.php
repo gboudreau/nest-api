@@ -224,9 +224,9 @@ class Nest
             foreach ($scheduled_events as $scheduled_event) {
                 if ($scheduled_event->entry_type == 'setpoint') {
                     $events[(int)$scheduled_event->time] = (object) array(
-                       'time' => $scheduled_event->time/60, // in minutes
-                       'target_temperature' => $scheduled_event->type == 'RANGE' ? array($this->temperatureInUserScale((float)$scheduled_event->{'temp-min'}), $this->temperatureInUserScale((float)$scheduled_event->{'temp-max'})) : $this->temperatureInUserScale((float) $scheduled_event->temp),
-                       'mode' => $scheduled_event->type == 'HEAT' ? TARGET_TEMP_MODE_HEAT : ($scheduled_event->type == 'COOL' ? TARGET_TEMP_MODE_COOL : TARGET_TEMP_MODE_RANGE)
+                        'time' => $scheduled_event->time/60, // in minutes
+                        'target_temperature' => $scheduled_event->type == 'RANGE' ? array($this->temperatureInUserScale((float)$scheduled_event->{'temp-min'}), $this->temperatureInUserScale((float)$scheduled_event->{'temp-max'})) : $this->temperatureInUserScale((float) $scheduled_event->temp),
+                        'mode' => $scheduled_event->type == 'HEAT' ? TARGET_TEMP_MODE_HEAT : ($scheduled_event->type == 'COOL' ? TARGET_TEMP_MODE_COOL : TARGET_TEMP_MODE_RANGE)
                     );
                 }
             }
@@ -983,31 +983,31 @@ class Nest
         }
         if (!empty($this->issue_token)) {
             // Get a Bearer token using the Google cookies and issue_token
-            $headers = [
+            $headers = array(
                 'Sec-Fetch-Mode: cors',
                 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36',
                 'X-Requested-With: XmlHttpRequest',
                 'Referer: https://accounts.google.com/o/oauth2/iframe',
                 'Cookie: ' . $this->cookies,
-            ];
+            );
             $result = $this->doGET($this->issue_token, $headers);
             if (!isset($result->access_token)) {
                 die("Error: Response to login request doesn't contain required access token. Response: '" . var_export($result, TRUE) . "'\n");
             }
 
             // Use Bearer token to get an access token, and user ID
-            $headers = [
+            $headers = array(
                 'Authorization: Bearer ' . $result->access_token,
                 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.100 Safari/537.36',
                 'X-Goog-API-Key: AIzaSyAdkSIMNc51XGNEAYWasX9UOWkS5P6sZE4', // Nest website's (public) API key,
                 'Referer: https://home.nest.com',
-            ];
-            $params = [
+            );
+            $params = array(
                 'embed_google_oauth_access_token' => TRUE,
                 'expire_after' => '3600s',
                 'google_oauth_access_token' => $result->access_token,
                 'policy_id' => 'authproxy-oauth-policy',
-            ];
+            );
             $result = $this->doPOST("https://nestauthproxyservice-pa.googleapis.com/v1/issue_jwt", $params, $headers);
             if (empty($result->claims->subject->nestId->id)) {
                 die("Error: Response to login request doesn't contain required User ID. Response: '" . var_export($result, TRUE) . "'\n");
@@ -1020,11 +1020,11 @@ class Nest
             $this->cache_expiration = strtotime($result->claims->expirationTime);
 
             // Get user
-            $params = [
-                'known_bucket_types' => ["user"],
-                'known_bucket_versions' => [],
-            ];
-            $result = $this->doPOST("https://home.nest.com/api/0.1/user/{$this->userid}/app_launch", json_encode($params), ['Content-type: text/json']);
+            $params = array(
+                'known_bucket_types' => array("user"),
+                'known_bucket_versions' => array(),
+            );
+            $result = $this->doPOST("https://home.nest.com/api/0.1/user/{$this->userid}/app_launch", json_encode($params), array('Content-type: text/json'));
             if (empty($result->service_urls->urls->transport_url)) {
                 die("Error: Response to login request doesn't contain required transport_url. Response: '" . var_export($result, TRUE) . "'\n");
             }
@@ -1096,7 +1096,7 @@ class Nest
      *
      * @throws RuntimeException
      */
-    protected function doGET($url, $headers = []) {
+    protected function doGET($url, $headers = array()) {
         return $this->doRequest('GET', $url, NULL, TRUE, $headers);
     }
 
@@ -1111,7 +1111,7 @@ class Nest
      *
      * @throws RuntimeException
      */
-    protected function doPOST($url, $data_fields, $headers = []) {
+    protected function doPOST($url, $data_fields, $headers = array()) {
         return $this->doRequest('POST', $url, $data_fields, TRUE, $headers);
     }
 
@@ -1128,7 +1128,7 @@ class Nest
      *
      * @throws RuntimeException
      */
-    protected function doRequest($method, $url, $data_fields = NULL, $with_retry = TRUE, $headers = []) {
+    protected function doRequest($method, $url, $data_fields = NULL, $with_retry = TRUE, $headers = array()) {
         $ch = curl_init();
         if ($url[0] == '/') {
             $url = $this->transport_url . $url;
