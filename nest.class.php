@@ -96,6 +96,8 @@ class Nest
      * @param string|null $password    Your Nest password.
      * @param string|null $issue_token Issue-token URL
      * @param string|null $cookies     Google cookies
+     *
+     * @throws InvalidArgumentException|UnexpectedValueException|RuntimeException
      */
     public function __construct($username = NULL, $password = NULL, $issue_token = NULL, $cookies = NULL) {
         if (!empty($issue_token)) {
@@ -141,6 +143,8 @@ class Nest
      * @param string $country_code (Optional) Country code
      *
      * @return stdClass
+     *
+     * @throws RuntimeException
      */
     public function getWeather($postal_code, $country_code = NULL) {
         try {
@@ -611,7 +615,7 @@ class Nest
      *
      * @return stdClass|bool The object returned by the API call, or FALSE on error.
      *
-     * @throws Exception
+     * @throws InvalidArgumentException
      */
     public function setFanMode($mode, $serial_number = NULL) {
         $duty_cycle = NULL;
@@ -626,10 +630,10 @@ class Nest
                     $timer = (int) $modes[1];
                 }
             } else {
-                throw new Exception("setFanMode(array \$mode[, ...]) needs at least a mode and a value in the \$mode array.");
+                throw new InvalidArgumentException("setFanMode(array \$mode[, ...]) needs at least a mode and a value in the \$mode array.");
             }
         } elseif (!is_string($mode)) {
-            throw new Exception("setFanMode() can only take a string or an array as it's first parameter.");
+            throw new InvalidArgumentException("setFanMode() can only take a string or an array as it's first parameter.");
         }
         return $this->_setFanMode($mode, $duty_cycle, $timer, $serial_number);
     }
@@ -929,6 +933,15 @@ class Nest
         unset($this->last_status);
     }
 
+    /**
+     * Load all status information from server.
+     *
+     * @param boolean $retry If needed, rety loading the status from the server a second time.
+     *
+     * @return \stdClass
+     *
+     * @throws RuntimeException
+     */
     public function getStatus($retry = TRUE) {
         $url = "/v3/mobile/" . $this->user;
         $status = $this->doGET($url);
@@ -976,6 +989,13 @@ class Nest
         }
     }
 
+    /**
+     * Login
+     *
+     * @return void
+     *
+     * @throws UnexpectedValueException|RuntimeException
+     */
     protected function login() {
         if ($this->use_cache()) {
             // No need to login; we'll use cached values for authentication.
@@ -992,7 +1012,7 @@ class Nest
             );
             $result = $this->doGET($this->issue_token, $headers);
             if (!isset($result->access_token)) {
-                die("Error: Response to login request doesn't contain required access token. Response: '" . var_export($result, TRUE) . "'\n");
+                throw new UnexpectedValueException("Response to login request doesn't contain required access token. Response: " . json_encode($result));
             }
 
             // Use Bearer token to get an access token, and user ID
@@ -1010,10 +1030,10 @@ class Nest
             );
             $result = $this->doPOST("https://nestauthproxyservice-pa.googleapis.com/v1/issue_jwt", $params, $headers);
             if (empty($result->claims->subject->nestId->id)) {
-                die("Error: Response to login request doesn't contain required User ID. Response: '" . var_export($result, TRUE) . "'\n");
+                throw new RuntimeException("Response to login request doesn't contain required User ID. Response: " . json_encode($result));
             }
             if (empty($result->jwt)) {
-                die("Error: Response to login request doesn't contain required access token. Response: '" . var_export($result, TRUE) . "'\n");
+                throw new RuntimeException("Response to login request doesn't contain required (JWT) access token. Response: " . json_encode($result));
             }
             $this->userid = $result->claims->subject->nestId->id;
             $this->access_token = $result->jwt;
@@ -1026,7 +1046,7 @@ class Nest
             );
             $result = $this->doPOST("https://home.nest.com/api/0.1/user/{$this->userid}/app_launch", json_encode($params), array('Content-type: text/json'));
             if (empty($result->service_urls->urls->transport_url)) {
-                die("Error: Response to login request doesn't contain required transport_url. Response: '" . var_export($result, TRUE) . "'\n");
+                throw new RuntimeException("Response to login request doesn't contain required transport_url. Response: " . json_encode($result));
             }
             $this->transport_url = $result->service_urls->urls->transport_url;
 
@@ -1042,7 +1062,7 @@ class Nest
         } else {
             $result = $this->doPOST(self::LOGIN_URL, array('username' => $this->username, 'password' => $this->password));
             if (!isset($result->urls)) {
-                die("Error: Response to login request doesn't contain required transport URL. Response: '" . var_export($result, TRUE) . "'\n");
+                throw new RuntimeException("Response to login request doesn't contain required transport URL. Response: " . json_encode($result));
             }
             $this->transport_url = $result->urls->transport_url;
             $this->access_token = $result->access_token;
