@@ -111,6 +111,24 @@ Example output for `getDeviceInfo()`:
 }
 ```
 
+Use try...catch to catch exceptions that could occur:
+```php
+try {
+    $nest = new Nest(NULL, NULL, $issue_token, $cookies);
+    // Execute all Nest-related code here
+} catch (UnexpectedValueException $ex) {
+    // Happens when the issue_token or cookie is not working, for whatever reason
+    $error_message = $ex->getMessage();
+    mail(...);
+} catch (RuntimeException $ex) {
+    // Probably a temporary server-error
+} catch (Exception $ex) {
+    // Other errors; should not happen if it worked in the past
+}
+
+// Continue your code here, for example to save the result in a database
+```
+
 Using a Google Account
 ----------------------
 The values of `$issue_token`, and `$cookies` are specific to your Google Account. To get them, follow these steps (only needs to be done once, as long as you stay logged into your Google Account).
