@@ -1205,16 +1205,20 @@ class Nest
         $info = curl_getinfo($ch);
 
         if ($info['http_code'] == 401 || (!$response && curl_errno($ch) != 0)) {
-            if ($with_retry && $this->use_cache()) {
-                // Received 401, and was using cached data; let's try to re-login and retry.
+            if ($with_retry) {
+                // Received 401; let's re-login then try again this same request
                 @unlink($this->cookie_file);
                 @unlink($this->cache_file);
                 if ($info['http_code'] == 401) {
                     $this->login();
                 }
-                return $this->doRequest($method, $url, $data_fields, !$with_retry);
+                return $this->doRequest($method, $url, $data_fields, FALSE);
             } else {
-                throw new RuntimeException("Error: HTTP request to $url returned an error: " . curl_error($ch), curl_errno($ch));
+                if (curl_errno($ch) != 0) {
+                    throw new RuntimeException("Error: HTTP request to $url returned a cURL error: [" . curl_errno($ch) . "] " . curl_error($ch), curl_errno($ch));
+                } else {
+                    throw new RuntimeException("Error: HTTP request to $url returned an HTTP error code " . $info['http_code'] . ". Response: " . str_replace(array("\n","\r"), '', $response), $info['http_code']);
+                }
             }
         }
 
