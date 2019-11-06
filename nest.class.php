@@ -926,6 +926,49 @@ class Nest
             'mac_address' => $this->last_status->device->{$serial_number}->mac_address
         );
     }
+    
+    /**
+    * Boost hot water.
+    *
+    * @param int  $seconds   Duration of boost.
+    * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+    *
+    * @return stdClass|bool The object returned by the API call, or FALSE on error.
+    */
+    public function setHotWaterBoost($boost_in_seconds = 30, $serial_number = NULL) {
+        $serial_number = $this->getDefaultSerial($serial_number);
+        $data = json_encode(array('hot_water_boost_time_to_end' => time() + $boost_in_seconds));
+        return $this->doPOST("/v2/put/device." . $serial_number, $data);
+    }
+
+    /**
+    * Cancel hot water boost. Sets boost timer to zero
+    *
+    * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+    *
+    * @return stdClass|bool The object returned by the API call, or FALSE on error.
+    * */
+    public function cancelHotWaterBoost($serial_number = NULL) {
+        return $this->setHotWaterBoost(0,$serial_number);
+    }
+
+
+    /**
+     * Get hot water status
+     *
+     * @param string $serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return string.
+     */
+    public function getHotWaterStatus($serial_number = NULL) {
+        $serial_number = $this->getDefaultSerial($serial_number);
+        if ($this->last_status->device->{$serial_number}->has_hot_water_control) {
+                return ($this->last_status->device->{$serial_number}->hot_water_active ? "On" : "Off");
+        } else {
+                return "device has no hot water control";
+        }
+        return "error";
+    }
 
     /* Helper functions */
 
