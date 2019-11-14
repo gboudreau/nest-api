@@ -54,9 +54,9 @@ define('NESTAPI_ERROR_API_OTHER_ERROR', 1004);
  */
 class Nest
 {
-    const USER_AGENT = 'Nest/2.1.3 CFNetwork/548.0.4';
+    const USER_AGENT = 'Nest/5.0.0.23 (iOScom.nestlabs.jasper.release) os=11.0';
     const PROTOCOL_VERSION = 1;
-    const LOGIN_URL = 'https://home.nest.com/user/login';
+    const LOGIN_URL = 'https://home.nest.com/session';
 
     protected $days_maps = array('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun');
 
