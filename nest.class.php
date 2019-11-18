@@ -424,6 +424,7 @@ class Nest
                     ),
                 ),
                 'eco_mode' => $eco_mode,
+                'eco_temperatures_assist_enabled' => $this->last_status->device->{$serial_number}->auto_away_enable,
                 'eco_temperatures' => (object) array(
                     'low' => ($this->last_status->device->{$serial_number}->away_temperature_low_enabled) ? $this->temperatureInUserScale((float)$this->last_status->device->{$serial_number}->away_temperature_low) : FALSE,
                     'high' => ($this->last_status->device->{$serial_number}->away_temperature_high_enabled) ? $this->temperatureInUserScale((float)$this->last_status->device->{$serial_number}->away_temperature_high) : FALSE,
