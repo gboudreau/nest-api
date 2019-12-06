@@ -33,6 +33,7 @@ define('DUALFUEL_BREAKPOINT_ALWAYS_ALT', 'always-alt');
 define('DEVICE_WITH_NO_NAME', 'Not Set');
 define('DEVICE_TYPE_THERMOSTAT', 'thermostat');
 define('DEVICE_TYPE_PROTECT', 'protect');
+define('DEVICE_TYPE_SENSOR', 'sensor');
 
 define('NESTAPI_ERROR_UNDER_MAINTENANCE', 1000);
 define('NESTAPI_ERROR_EMPTY_RESPONSE', 1001);
@@ -276,7 +277,7 @@ class Nest
     /**
      * Get the specified device (thermostat or protect) information.
      *
-     * @param string $serial_number The device (thermostat or protect) serial number. Defaults to the first device of the account.
+     * @param string $serial_number The device (thermostat, sensor, or protect) serial number. Defaults to the first device of the account.
      *
      * @return stdClass
      */
@@ -284,6 +285,7 @@ class Nest
         $this->prepareForGet();
         $serial_number = $this->getDefaultSerial($serial_number);
         $topaz = isset($this->last_status->topaz) ? $this->last_status->topaz : array();
+        $kryptonite = isset($this->last_status->kryptonite) ? $this->last_status->kryptonite : array();
         foreach ($topaz as $protect) {
             if ($serial_number == $protect->serial_number) {
                 // The specified device is a Nest Protect
@@ -337,6 +339,19 @@ class Nest
                     'name' => !empty($protect->description) ? $protect->description : DEVICE_WITH_NO_NAME,
                     'where' => isset($this->where_map[$protect->spoken_where_id]) ? $this->where_map[$protect->spoken_where_id] : $protect->spoken_where_id,
                     'color' => isset($protect->device_external_color) ? $protect->device_external_color : NULL,
+                );
+                return $infos;
+            }
+        }
+        foreach ($kryptonite as $sensor_serial => $sensor) {
+            if ($serial_number == $sensor_serial) {
+                // The specified device is a Nest Sensor
+                $infos = (object) array(
+                    'temperature'           => $this->temperatureInUserScale((float) $sensor->current_temperature),
+                    'battery_level'         => $sensor->battery_level,
+                    'last_status'           => date(DATETIME_FORMAT, $sensor->last_updated_at),
+                    'location'              => $sensor->structure_id,
+                    'where'                 => isset($this->where_map[$sensor->where_id]) ? $this->where_map[$sensor->where_id] : $sensor->where_id,
                 );
                 return $infos;
             }
@@ -852,10 +867,11 @@ class Nest
         return $this->last_status->device->{$serial_number}->temperature_scale;
     }
 
+
     /**
      * Get all the devices of a specific type from the user's account.
      *
-     * @param string $type DEVICE_TYPE_THERMOSTAT or DEVICE_TYPE_PROTECT.
+     * @param string $type DEVICE_TYPE_THERMOSTAT or DEVICE_TYPE_PROTECT or DEVICE_TYPE_SENSOR
      *
      * @return array Devices
      */
@@ -868,6 +884,9 @@ class Nest
                 $protects[] = $protect->serial_number;
             }
             return $protects;
+        }
+        elseif ($type == DEVICE_TYPE_SENSOR) {
+            return isset($this->last_status->kryptonite) ? array_keys(get_object_vars($this->last_status->kryptonite)) : array();
         }
         $devices_serials = array();
         foreach ($this->last_status->user->{$this->userid}->structures as $structure) {
@@ -928,7 +947,7 @@ class Nest
             'mac_address' => $this->last_status->device->{$serial_number}->mac_address
         );
     }
-    
+
     /**
     * Boost hot water.
     *
