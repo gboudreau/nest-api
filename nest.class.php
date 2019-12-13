@@ -1070,11 +1070,13 @@ class Nest
     /**
      * Login
      *
+     * @param bool $retry Should retry (once)?
+     *
      * @return void
      *
      * @throws UnexpectedValueException|RuntimeException
      */
-    protected function login() {
+    protected function login($retry = TRUE) {
         if ($this->use_cache()) {
             // No need to login; we'll use cached values for authentication.
             return;
@@ -1088,7 +1090,17 @@ class Nest
                 'Referer: https://accounts.google.com/o/oauth2/iframe',
                 'Cookie: ' . $this->cookies,
             );
-            $result = $this->doGET($this->issue_token, $headers);
+            try {
+                $result = $this->doGET($this->issue_token, $headers);
+            } catch (RuntimeException $ex) {
+                if ($retry) {
+                    // Delete cookie and cache files, and retry
+                    @unlink($this->cookie_file);
+                    @unlink($this->cache_file);
+                    $this->login(FALSE);
+                    return;
+                }
+            }
             if (!isset($result->access_token)) {
                 throw new UnexpectedValueException("Response to login request doesn't contain required access token. Response: " . json_encode($result));
             }
