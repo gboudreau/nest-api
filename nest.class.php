@@ -35,6 +35,7 @@ define('DEVICE_TYPE_THERMOSTAT', 'thermostat');
 define('DEVICE_TYPE_PROTECT', 'protect');
 define('DEVICE_TYPE_SENSOR', 'sensor');
 
+define('NESTAPI_DEVICE_TYPE_SENSOR', 'kryptonite.');
 define('NESTAPI_ERROR_UNDER_MAINTENANCE', 1000);
 define('NESTAPI_ERROR_EMPTY_RESPONSE', 1001);
 define('NESTAPI_ERROR_NOT_JSON_RESPONSE', 1002);
@@ -192,15 +193,22 @@ class Nest
         $user_structures = array();
         $class_name = get_class($this);
         $topaz = isset($this->last_status->topaz) ? $this->last_status->topaz : array();
+        $kryptonite = isset($this->last_status->kryptonite) ? $this->last_status->kryptonite : array();
         foreach ($structures as $struct_id => $structure) {
             // Nest Protects at this location (structure)
             $protects = array();
+            $sensors = array();
             foreach ($topaz as $protect) {
                 if ($protect->structure_id == $struct_id) {
                     $protects[] = $protect->serial_number;
                 }
             }
-            if (empty($protects) && empty($structure->devices)) {
+            foreach ($kryptonite as $serial_number => $sensor) {
+                if ($sensor->structure_id == $struct_id) {
+                    $sensors[] = $serial_number;
+                }
+            }
+            if (empty($protects) && empty($sensors) && empty($structure->devices)) {
                 continue;
             }
 
@@ -217,6 +225,7 @@ class Nest
                 'away_last_changed' => !empty($structure->away_timestamp) ? date(DATETIME_FORMAT, $structure->away_timestamp) : NULL,
                 'thermostats' => array_map(array($class_name, 'cleanDevices'), $structure->devices),
                 'protects' => $protects,
+                'sensors'  => $sensors,
             );
         }
         return $user_structures;
@@ -422,10 +431,23 @@ class Nest
             $current_modes[] = 'away';
         }
 
+        //Process sensors associated to this thermostat
+        $sensors = (object)array('all' => array(), 'active' => array(), 'active_temperatures' => array());
+        foreach ($this->last_status->rcs_settings->{$serial_number}->associated_rcs_sensors as $sensor_serial) {
+            $sensor_parsed_serial_number = str_replace(NESTAPI_DEVICE_TYPE_SENSOR, '', $sensor_serial);
+            $current_sensor = $this->getDeviceInfo($sensor_parsed_serial_number);
+            $current_sensor->is_active = in_array($sensor_serial, $this->last_status->rcs_settings->{$serial_number}->active_rcs_sensors);
+            if ($current_sensor->is_active) {
+                $sensors->active[] = $current_sensor;
+                $sensors->active_temperatures[] = $current_sensor->temperature;
+            }
+            $sensors->all[] = $current_sensor;
+        }
         $infos = (object) array(
             'current_state' => (object) array(
                 'mode' => implode(',', $current_modes),
                 'temperature' => $this->temperatureInUserScale((float) $this->last_status->shared->{$serial_number}->current_temperature),
+                'backplate_temperature' => $this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->backplate_temperature),
                 'humidity' => $this->last_status->device->{$serial_number}->current_humidity,
                 'ac' => $this->last_status->shared->{$serial_number}->hvac_ac_state,
                 'heat' => $this->last_status->shared->{$serial_number}->hvac_heater_state,
@@ -465,6 +487,7 @@ class Nest
                 'temperature' => $target_temperatures,
                 'time_to_target' => $this->last_status->device->{$serial_number}->time_to_target
             ),
+            'sensors' => $sensors,
             'serial_number' => $this->last_status->device->{$serial_number}->serial_number,
             'scale' => $this->last_status->device->{$serial_number}->temperature_scale,
             'location' => $structure,
