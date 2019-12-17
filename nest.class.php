@@ -62,40 +62,6 @@ class Nest
 
     protected $days_maps = array('Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun');
 
-    //Some may be hidden in the Nest applications
-    protected $where_map = array(
-        "00000000-0000-0000-9a4b-de251ffe8dcb" => "Game Room",
-        "00000000-0000-0000-0000-00010000000c" => "Living Room",
-        "00000000-0000-0000-0000-000100000005" => "Master Bedroom",
-        "00000000-0000-0000-0000-000100000013" => "Front Yard",
-        "00000000-0000-0000-0000-000100000001" => "Basement",
-        "00000000-0000-0000-0000-000100000010" => "Dining Room",
-        "00000000-0000-0000-0000-00010000001d" => "Back Door",
-        "00000000-0000-0000-0000-000100000017" => "Deck",
-        "00000000-0000-0000-0000-00010000000b" => "Family Room",
-        "00000000-0000-0000-0000-000100000002" => "Hallway",
-        "00000000-0000-0000-0000-000100000006" => "Downstairs",
-        "00000000-0000-0000-0000-000100000012" => "Driveway",
-        "00000000-0000-0000-0000-000100000009" => "Bathroom",
-        "00000000-0000-0000-0000-00010000001c" => "Side Door",
-        "00000000-0000-0000-0000-00010000000f" => "Upstairs",
-        "00000000-0000-0000-0000-000100000016" => "Shed",
-        "00000000-0000-0000-0000-000100000007" => "Garage",
-        "00000000-0000-0000-0000-00010000000a" => "Kitchen",
-        "00000000-0000-0000-0000-000100000011" => "Backyard",
-        "00000000-0000-0000-0000-00010000001b" => "Front Door",
-        "00000000-0000-0000-0000-000100000015" => "Guest House",
-        "00000000-0000-0000-0000-000100000008" => "Kids Room",
-        "00000000-0000-0000-0000-000100000003" => "Den",
-        "00000000-0000-0000-0000-00010000000e" => "Office",
-        "00000000-0000-0000-0000-000100000004" => "Attic",
-        "00000000-0000-0000-0000-000100000014" => "Outside",
-        "00000000-0000-0000-0000-000100000000" => "Entryway",
-        "00000000-0000-0000-0000-00010000000d" => "Bedroom",
-        "00000000-0000-0000-0000-000100000018" => "Patio",
-        "00000000-0000-0000-0000-00010000001a" => "Guest Room",
-    );
-
     protected $transport_url;
     protected $access_token;
     protected $user;
@@ -360,7 +326,7 @@ class Nest
                         'mac_address' => $protect->wifi_mac_address
                     ),
                     'name' => !empty($protect->description) ? $protect->description : DEVICE_WITH_NO_NAME,
-                    'where' => isset($this->where_map[$protect->spoken_where_id]) ? $this->where_map[$protect->spoken_where_id] : $protect->spoken_where_id,
+                    'where' => $this->getWhereById($protect->spoken_where_id),
                     'color' => isset($protect->device_external_color) ? $protect->device_external_color : NULL,
                 );
                 return $infos;
@@ -374,7 +340,7 @@ class Nest
                     'battery_level'         => $sensor->battery_level,
                     'last_status'           => date(DATETIME_FORMAT, $sensor->last_updated_at),
                     'location'              => $sensor->structure_id,
-                    'where'                 => isset($this->where_map[$sensor->where_id]) ? $this->where_map[$sensor->where_id] : $sensor->where_id,
+                    'where'                 => $this->getWhereById($sensor->where_id),
                 );
                 return $infos;
             }
@@ -495,7 +461,7 @@ class Nest
             'name' => !empty($this->last_status->shared->{$serial_number}->name) ? $this->last_status->shared->{$serial_number}->name : DEVICE_WITH_NO_NAME,
             'auto_cool' => ((int) $this->last_status->device->{$serial_number}->leaf_threshold_cool === 0) ? FALSE : ceil($this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->leaf_threshold_cool)),
             'auto_heat' => ((int) $this->last_status->device->{$serial_number}->leaf_threshold_heat === 1000) ? FALSE : floor($this->temperatureInUserScale((float) $this->last_status->device->{$serial_number}->leaf_threshold_heat)),
-            'where' => isset($this->last_status->device->{$serial_number}->where_id) ? isset($this->where_map[$this->last_status->device->{$serial_number}->where_id]) ? $this->where_map[$this->last_status->device->{$serial_number}->where_id] : $this->last_status->device->{$serial_number}->where_id : ""
+            'where' => isset($this->last_status->device->{$serial_number}->where_id) ? $this->getWhereById($this->last_status->device->{$serial_number}->where_id) : "",
         );
         if ($this->last_status->device->{$serial_number}->has_humidifier) {
             $infos->current_state->humidifier = $this->last_status->device->{$serial_number}->humidifier_state;
@@ -1217,6 +1183,25 @@ class Nest
             'last_status' => @$this->last_status
         );
         file_put_contents($this->cache_file, serialize($vars));
+    }
+
+    /**
+     * Obtain the Nest "where name" by the where id
+     *
+     * @param string $device_where_id     device where id
+     *
+     * @return string of the where name or value of parameter
+     *
+     */
+    protected function getWhereById($device_where_id) {
+        foreach($this->last_status->where as $structure) {
+            foreach($structure->wheres as $where) {
+                if($where->where_id === $device_where_id) {
+                    return $where->name;
+                }
+            }
+        }
+        return $device_where_id;
     }
 
     /**
