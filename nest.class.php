@@ -82,6 +82,12 @@ class Nest
      * @throws InvalidArgumentException|UnexpectedValueException|RuntimeException
      */
     public function __construct($username = NULL, $password = NULL, $issue_token = NULL, $cookies = NULL) {
+        if ($issue_token === NULL && defined('ISSUE_TOKEN')) {
+            $issue_token = ISSUE_TOKEN;
+        }
+        if ($cookies === NULL && defined('COOKIES')) {
+            $cookies = COOKIES;
+        }
         if (!empty($issue_token)) {
             $this->issue_token = $issue_token;
             if (empty($cookies)) {
