@@ -30,8 +30,9 @@ Features
     - Fan mode: auto, on, minutes per hour
     - Fan: every day schedule (start & stop time)
     - Fan: on with timer (stops after X minutes/hours)
-    - Away mode: on, off, min/max temperatures, Auto-Away
+    - Eco (Away) mode: on, off, min/max temperatures, Auto-Away
     - Dual fuel: breakpoint (use alt. fuel when outdoor temp is below X), always alt, always primary
+    - Safety temperatures (low & high temperatures)
     - Humidity (on, off, %)
     - Turn off HVAC
 
