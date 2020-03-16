@@ -454,8 +454,8 @@ class Nest
                     'high' => ($this->last_status->device->{$serial_number}->away_temperature_high_enabled) ? $this->temperatureInUserScale((float)$this->last_status->device->{$serial_number}->away_temperature_high) : FALSE,
                 ),
                 'safety_temperatures' => (object) array(
-                    'lower' => ($this->last_status->device->{$serial_number}->lower_safety_temp_enabled) ? $this->temperatureInUserScale((float)$this->last_status->device->{$serial_number}->lower_safety_temp) : FALSE,
-                    'upper' => ($this->last_status->device->{$serial_number}->upper_safety_temp_enabled) ? $this->temperatureInUserScale((float)$this->last_status->device->{$serial_number}->upper_safety_temp) : FALSE,
+                    'low' => ($this->last_status->device->{$serial_number}->lower_safety_temp_enabled) ? $this->temperatureInUserScale((float)$this->last_status->device->{$serial_number}->lower_safety_temp) : FALSE,
+                    'high' => ($this->last_status->device->{$serial_number}->upper_safety_temp_enabled) ? $this->temperatureInUserScale((float)$this->last_status->device->{$serial_number}->upper_safety_temp) : FALSE,
                 ),
             ),
             'target' => (object) array(
