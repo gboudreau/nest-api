@@ -95,8 +95,8 @@ class Nest
             }
             $this->cookies = $cookies;
 
-            $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . md5($this->issue_token);
-            $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . md5($this->issue_token);
+            $this->cookie_file = static::getTempFile('cookies', md5($this->issue_token));
+            $this->cache_file = static::getTempFile('cache', md5($this->issue_token));
         } else {
             if ($username === NULL && defined('USERNAME')) {
                 $username = USERNAME;
@@ -110,8 +110,8 @@ class Nest
             $this->username = $username;
             $this->password = $password;
 
-            $this->cookie_file = sys_get_temp_dir() . '/nest_php_cookies_' . md5($username . $password);
-            $this->cache_file = sys_get_temp_dir() . '/nest_php_cache_' . md5($username . $password);
+            $this->cookie_file = static::getTempFile('cookies', md5($username . $password));
+            $this->cache_file = static::getTempFile('cache', md5($username . $password));
         }
 
         static::secureTouch($this->cookie_file);
@@ -122,6 +122,21 @@ class Nest
 
         // Log in, if needed
         $this->login();
+    }
+
+    private static function getTempFile($type, $suffix) {
+        $file = sys_get_temp_dir() . "/nest_php_{$type}_{$suffix}";
+        if (!is_file($file) || !is_writable($file)) {
+            if (function_exists('posix_geteuid')) {
+                // Use the posix function if available. This requires php-posix or php-process package
+                $u = posix_getpwuid(posix_geteuid());
+                $unix_user = $u['name'];
+            } else {
+                $unix_user = get_current_user();
+            }
+            $file = sys_get_temp_dir() . "/nest_php_{$type}_{$unix_user}_{$suffix}";
+        }
+        return $file;
     }
 
     /**
