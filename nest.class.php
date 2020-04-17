@@ -124,7 +124,7 @@ class Nest
         $this->login();
     }
 
-    private static function getTempFile($type, $suffix) {
+    protected static function getTempFile($type, $suffix) {
         $file = sys_get_temp_dir() . "/nest_php_{$type}_{$suffix}";
         if (!is_file($file) || !is_writable($file)) {
             if (function_exists('posix_geteuid')) {
