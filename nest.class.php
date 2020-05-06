@@ -35,7 +35,6 @@ define('DEVICE_TYPE_THERMOSTAT', 'thermostat');
 define('DEVICE_TYPE_PROTECT', 'protect');
 define('DEVICE_TYPE_SENSOR', 'sensor');
 
-define('NESTAPI_DEVICE_TYPE_SENSOR', 'kryptonite.');
 define('NESTAPI_ERROR_UNDER_MAINTENANCE', 1000);
 define('NESTAPI_ERROR_EMPTY_RESPONSE', 1001);
 define('NESTAPI_ERROR_NOT_JSON_RESPONSE', 1002);
@@ -421,8 +420,7 @@ class Nest
         //Process sensors associated to this thermostat
         $sensors = (object)array('all' => array(), 'active' => array(), 'active_temperatures' => array());
         foreach ($this->last_status->rcs_settings->{$serial_number}->associated_rcs_sensors as $sensor_serial) {
-            $sensor_parsed_serial_number = str_replace(NESTAPI_DEVICE_TYPE_SENSOR, '', $sensor_serial);
-            $current_sensor = $this->getDeviceInfo($sensor_parsed_serial_number);
+            $current_sensor = $this->getDeviceInfo(self::cleanDevices($sensor_serial));
             $current_sensor->is_active = in_array($sensor_serial, $this->last_status->rcs_settings->{$serial_number}->active_rcs_sensors);
             if ($current_sensor->is_active) {
                 $sensors->active[] = $current_sensor;
