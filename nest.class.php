@@ -935,26 +935,23 @@ class Nest
      */
     public function getDevices($type = DEVICE_TYPE_THERMOSTAT) {
         $this->prepareForGet();
-        if ($type == DEVICE_TYPE_PROTECT) {
-            $protects = array();
-            $topaz = isset($this->last_status->topaz) ? $this->last_status->topaz : array();
-            foreach ($topaz as $protect) {
-                $protects[] = $protect->serial_number;
+        $deviceKeyMap = array(DEVICE_TYPE_PROTECT => 'topaz', DEVICE_TYPE_SENSOR => 'kryptonite');
+
+        if (array_key_exists($type, $deviceKeyMap))  {
+            $accessor = $deviceKeyMap[$type];
+            return isset($this->last_status->{$accessor}) ? array_keys(get_object_vars($this->last_status->{$accessor})) : array();
+        }
+        if ($type == DEVICE_TYPE_THERMOSTAT) {
+            $devices_serials = array();
+            foreach ($this->last_status->structure as $structure) {
+                foreach ($structure->devices as $device) {
+                    list(, $device_serial) = explode('.', $device);
+                    $devices_serials[] = $device_serial;
+                }
             }
-            return $protects;
+            return $devices_serials;
         }
-        elseif ($type == DEVICE_TYPE_SENSOR) {
-            return isset($this->last_status->kryptonite) ? array_keys(get_object_vars($this->last_status->kryptonite)) : array();
-        }
-        $devices_serials = array();
-        foreach ($this->last_status->user->{$this->userid}->structures as $structure) {
-            list(, $structure_id) = explode('.', $structure);
-            foreach ($this->last_status->structure->{$structure_id}->devices as $device) {
-                list(, $device_serial) = explode('.', $device);
-                $devices_serials[] = $device_serial;
-            }
-        }
-        return $devices_serials;
+        throw new InvalidArgumentException("Invalid device type requested");
     }
 
     /**
@@ -1439,4 +1436,3 @@ class Nest
         $temp = tempnam(sys_get_temp_dir(), 'NEST');
         rename($temp, $fname);
     }
-}
