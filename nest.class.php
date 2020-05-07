@@ -935,23 +935,20 @@ class Nest
      */
     public function getDevices($type = DEVICE_TYPE_THERMOSTAT) {
         $this->prepareForGet();
+        $devices_serials = array();
         if ($type == DEVICE_TYPE_PROTECT) {
-            $protects = array();
             $topaz = isset($this->last_status->topaz) ? $this->last_status->topaz : array();
             foreach ($topaz as $protect) {
-                $protects[] = $protect->serial_number;
+                $devices_serials[] = $protect->serial_number;
             }
-            return $protects;
+            return $devices_serials;
         }
-        elseif ($type == DEVICE_TYPE_SENSOR) {
+        if ($type == DEVICE_TYPE_SENSOR) {
             return isset($this->last_status->kryptonite) ? array_keys(get_object_vars($this->last_status->kryptonite)) : array();
         }
-        $devices_serials = array();
-        foreach ($this->last_status->user->{$this->userid}->structures as $structure) {
-            list(, $structure_id) = explode('.', $structure);
-            foreach ($this->last_status->structure->{$structure_id}->devices as $device) {
-                list(, $device_serial) = explode('.', $device);
-                $devices_serials[] = $device_serial;
+        foreach ($this->last_status->structure as $structure) {
+            foreach ($structure->devices as $device) {
+                $devices_serials[] = self::cleanDevices($device);
             }
         }
         return $devices_serials;
