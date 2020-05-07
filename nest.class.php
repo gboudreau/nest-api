@@ -2,6 +2,7 @@
 
 defined('DATE_FORMAT') OR define('DATE_FORMAT', 'Y-m-d');
 defined('DATETIME_FORMAT') OR define('DATETIME_FORMAT', DATE_FORMAT . ' H:i:s');
+defined('USE_STATUS_BUCKETS') OR define('USE_STATUS_BUCKETS', FALSE);
 define('TARGET_TEMP_MODE_COOL', 'cool');
 define('TARGET_TEMP_MODE_HEAT', 'heat');
 define('TARGET_TEMP_MODE_RANGE', 'range');
@@ -1050,8 +1051,8 @@ class Nest
         unset($this->last_status);
     }
 
-    /**
-     * Load all status information from server.
+        /**
+     * Abstraction function to load all status information from server. Calls getStatusUserBuckets or getStatusMobileUser to obtain data
      *
      * @param boolean $retry If needed, rety loading the status from the server a second time.
      *
@@ -1060,6 +1061,22 @@ class Nest
      * @throws RuntimeException
      */
     public function getStatus($retry = TRUE) {
+        $status = USE_STATUS_BUCKETS ? $this->getStatusUserBuckets() : $this->getStatusMobileUser($retry);
+        $this->last_status = $status;
+        $this->saveCache();
+        return $status;
+    }
+
+    /**
+     * Load all status information from server.
+     *
+     * @param boolean $retry If needed, retry loading the status from the server a second time.
+     *
+     * @return \stdClass
+     *
+     * @throws RuntimeException
+     */
+    protected function getStatusMobileUser($retry = TRUE) {
         $url = "/v3/mobile/" . $this->user;
         $status = $this->doGET($url);
         if (!is_object($status)) {
@@ -1070,12 +1087,48 @@ class Nest
                 @unlink($this->cookie_file);
                 @unlink($this->cache_file);
                 $this->login();
-                return $this->getStatus(FALSE);
+                return $this->getStatusMobileUser(FALSE);
             }
             throw new RuntimeException("Error: HTTP request to $url returned cmd = REINIT_STATE. Retrying failed.");
         }
-        $this->last_status = $status;
-        $this->saveCache();
+        return $status;
+    }
+
+    /**
+     * Load all status information from server by utilizing app launch buckets.  Responses are similar to getStatusMobileUser function, but improves support for nonowner devices
+     *
+     * @return \stdClass
+     *
+     * @throws RuntimeException
+     */
+    protected function getStatusUserBuckets() {
+        $params = array(
+            'known_bucket_types' => array("buckets", "delayed_topaz", "demand_response", "device", "device_alert_dialog", "geofence_info", "kryptonite", "link", "message", "message_center", "metadata", "occupancy", "quartz", "safety", "rcs_settings", "safety_summary", "schedule", "shared", "structure", "structure_history", "structure_metadata", "topaz", "topaz_resource", "track", "trip", "tuneups", "user", "user_alert_dialog", "user_settings", "where", "widget_track"),
+            'known_bucket_versions' => array(),
+        );
+        $result = $this->doPOST("https://home.nest.com/api/0.1/user/{$this->userid}/app_launch", json_encode($params), array('Content-type: text/json'));
+
+        if (!is_object($result) || !is_array($result->updated_buckets)) {
+            throw new RuntimeException("Error: Couldn't get status from NEST API: $result");
+        }
+
+        $status = (object)array();
+        foreach ($result->updated_buckets as $bucket) {
+            list($category, $property) = explode('.', $bucket->object_key);
+            if (is_null($category) || is_null($property) || !isset($bucket->value)) {
+                continue;
+            }
+            if (!isset($status->{$category})) {
+                $status->{$category} = (object)array();
+            }
+            $status->{$category}->{$property} = $bucket->value;
+        }
+
+        //Topaz timestamp is in widget track, also place it to in the protect object for backwards compatibility
+        $topaz = isset($status->topaz) ? $status->topaz : array();
+        foreach($topaz as $serial => &$protect) {
+            $protect->{'$timestamp'} = isset($status->widget_track->{$serial}->last_connection) ? $status->widget_track->{$serial}->last_connection : 0;
+        }
         return $status;
     }
 
