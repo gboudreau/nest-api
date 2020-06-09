@@ -438,7 +438,6 @@ class Nest
                 'ac' => $this->last_status->shared->{$serial_number}->hvac_ac_state,
                 'heat' => $this->last_status->shared->{$serial_number}->hvac_heater_state,
                 'alt_heat' => $this->last_status->shared->{$serial_number}->hvac_alt_heat_state,
-                'fan' => $this->last_status->shared->{$serial_number}->hvac_fan_state,
                 'hot_water' => isset($this->last_status->device->{$serial_number}->has_hot_water_control) ? $this->last_status->device->{$serial_number}->hot_water_active : NULL,
                 'auto_away' => $this->last_status->shared->{$serial_number}->auto_away, // -1 when disabled, 0 when enabled (thermostat can set auto-away), >0 when enabled and active (thermostat is currently in auto-away mode)
                 'manual_away' => $structure_away, //Leaving this for others - but manual away really doesn't exist anymore and should be removed eventually
@@ -491,6 +490,21 @@ class Nest
             $infos->current_state->humidifier = $this->last_status->device->{$serial_number}->humidifier_state;
             $infos->target->humidity = $this->last_status->device->{$serial_number}->target_humidity;
             $infos->target->humidity_enabled = $this->last_status->device->{$serial_number}->target_humidity_enabled;
+        }
+        if ($this->last_status->device->{$serial_number}->has_fan) {
+            //Retained the 'fan' attribute for LTS
+            $infos->current_state->fan = $this->last_status->shared->{$serial_number}->hvac_fan_state;
+            $infos->current_state->fan_info = (object) array(
+                'is_active' => $this->last_status->shared->{$serial_number}->hvac_fan_state,
+                'mode' => $this->last_status->device->{$serial_number}->fan_mode,
+                'current_speed' => $this->last_status->device->{$serial_number}->fan_current_speed,
+                'duty_cycle' => $this->last_status->device->{$serial_number}->fan_duty_cycle, //Run time per hour (in seconds)
+                //Seconds since midnight
+                'duty_start_time' => $this->last_status->device->{$serial_number}->fan_duty_start_time,
+                'duty_end_time' => $this->last_status->device->{$serial_number}->fan_duty_end_time,
+                //Seconds remaining
+                'timer_timeout' => $this->last_status->device->{$serial_number}->fan_timer_timeout > 0 ? $this->last_status->device->{$serial_number}->fan_timer_timeout - time() : false,
+            );
         }
 
         return $infos;
