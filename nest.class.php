@@ -226,6 +226,7 @@ class Nest
      * @return array Returns as array, one element for each day of the week for which there has at least one scheduled event.
      *               Array keys are a textual representation of a day, three letters, as returned by `date('D')`.
      *               Array values are arrays of scheduled temperatures, including a time (in minutes after midnight),
+     *               invoke_timestamp of when the event would be activated,
      *               and a mode (one of the TARGET_TEMP_MODE_* defines).
      */
     public function getDeviceSchedule($serial_number = NULL) {
@@ -238,8 +239,10 @@ class Nest
             $events = array();
             foreach ($scheduled_events as $scheduled_event) {
                 if ($scheduled_event->entry_type == 'setpoint') {
+                    $invoke_at = strtotime("{$this->days_maps[(int) $day]} 0:00:00") + $scheduled_event->time;
                     $events[(int)$scheduled_event->time] = (object) array(
                         'time' => $scheduled_event->time/60, // in minutes
+                        'invoke_timestamp' => ($invoke_at >= time()) ? $invoke_at : strtotime("+7 days", $invoked_at),
                         'target_temperature' => $scheduled_event->type == 'RANGE' ? array($this->temperatureInUserScale((float)$scheduled_event->{'temp-min'}), $this->temperatureInUserScale((float)$scheduled_event->{'temp-max'})) : $this->temperatureInUserScale((float) $scheduled_event->temp),
                         'mode' => $scheduled_event->type == 'HEAT' ? TARGET_TEMP_MODE_HEAT : ($scheduled_event->type == 'COOL' ? TARGET_TEMP_MODE_COOL : TARGET_TEMP_MODE_RANGE)
                     );
