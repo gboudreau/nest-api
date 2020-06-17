@@ -242,7 +242,7 @@ class Nest
                     $invoke_at = strtotime("{$this->days_maps[(int) $day]} 0:00:00") + $scheduled_event->time;
                     $events[(int)$scheduled_event->time] = (object) array(
                         'time' => $scheduled_event->time/60, // in minutes
-                        'invoke_timestamp' => ($invoke_at >= time()) ? $invoke_at : strtotime("+7 days", $invoked_at),
+                        'invoke_timestamp' => ($invoke_at >= time()) ? $invoke_at : strtotime("+7 days", $invoke_at),
                         'target_temperature' => $scheduled_event->type == 'RANGE' ? array($this->temperatureInUserScale((float)$scheduled_event->{'temp-min'}), $this->temperatureInUserScale((float)$scheduled_event->{'temp-max'})) : $this->temperatureInUserScale((float) $scheduled_event->temp),
                         'mode' => $scheduled_event->type == 'HEAT' ? TARGET_TEMP_MODE_HEAT : ($scheduled_event->type == 'COOL' ? TARGET_TEMP_MODE_COOL : TARGET_TEMP_MODE_RANGE)
                     );
