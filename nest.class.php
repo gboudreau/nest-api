@@ -509,6 +509,19 @@ class Nest
                 'timer_timeout' => $this->last_status->device->{$serial_number}->fan_timer_timeout > 0 ? $this->last_status->device->{$serial_number}->fan_timer_timeout - time() : false,
             );
         }
+        if (isset($this->last_status->demand_response->{$serial_number}->active_events)) {
+            $infos->demand_response = (object)array(
+                'has_active_event' => false,
+                'has_active_peak_period' => false,
+                'events' => $this->last_status->demand_response->{$serial_number}->active_events
+            );
+            foreach ($infos->demand_response->events as &$event) {
+                $event->is_peak_period_active = $event->peak_period_start_time_utc <= time() && time() < $event->stop_time_utc;
+                $event->is_event_active = $event->start_time_utc <= time() && time() < $event->stop_time_utc;
+                $infos->demand_response->has_active_peak_period = $infos->demand_response->has_active_peak_period || $event->is_peak_period_active;
+                $infos->demand_response->has_active_event = $infos->demand_response->has_active_event || $event->is_event_active;
+            }
+        }
 
         return $infos;
     }
