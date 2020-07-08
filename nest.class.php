@@ -83,10 +83,10 @@ class Nest
      */
     public function __construct($username = NULL, $password = NULL, $issue_token = NULL, $cookies = NULL) {
         if ($issue_token === NULL && defined('ISSUE_TOKEN')) {
-            $issue_token = ISSUE_TOKEN;
+            $issue_token = constant('ISSUE_TOKEN');
         }
         if ($cookies === NULL && defined('COOKIES')) {
-            $cookies = COOKIES;
+            $cookies = constant('COOKIES');
         }
         if (!empty($issue_token)) {
             $this->issue_token = $issue_token;
@@ -99,10 +99,10 @@ class Nest
             $this->cache_file = static::getTempFile('cache', md5($this->issue_token));
         } else {
             if ($username === NULL && defined('USERNAME')) {
-                $username = USERNAME;
+                $username = constant('USERNAME');
             }
             if ($password === NULL && defined('PASSWORD')) {
-                $password = PASSWORD;
+                $password = constant('PASSWORD');
             }
             if ($username === NULL || $password === NULL) {
                 throw new InvalidArgumentException('Nest credentials were not provided.');
