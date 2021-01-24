@@ -1464,7 +1464,7 @@ class Nest
             throw new RuntimeException("Error: Response from request to $url is not valid JSON data. Response: " . str_replace(array("\n","\r"), '', $response), NESTAPI_ERROR_NOT_JSON_RESPONSE);
         }
 
-        if ($info['http_code'] == 400 || $info['http_code'] == 500) {
+        if ($info['http_code'] >= 400) {
             if (!is_object($json)) {
                 throw new RuntimeException("Error: HTTP {$info['http_code']} from request to $url. Response: " . str_replace(array("\n","\r"), '', $response), NESTAPI_ERROR_API_OTHER_ERROR);
             }
