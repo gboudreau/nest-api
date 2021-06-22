@@ -365,6 +365,7 @@ class Nest
                     'last_status'           => date(DATETIME_FORMAT, $sensor->last_updated_at),
                     'location'              => $sensor->structure_id,
                     'where'                 => $this->getWhereById($sensor->where_id),
+                    'serial_number'         => $sensor_serial,
                 );
                 return $infos;
             }
@@ -615,6 +616,38 @@ class Nest
         $temp_high = $this->temperatureInCelsius($temp_high, $serial_number);
         $data = json_encode(array('target_change_pending' => TRUE, 'target_temperature_low' => $temp_low, 'target_temperature_high' => $temp_high));
         return $this->doPOST("/v2/put/shared." . $serial_number, $data);
+    }
+
+    /**
+     * Change the thermostat target temperature device
+     *
+     * @param string $sensor_serial_number The thermostat or thermostat sensor serial number to use for target temperature
+     * @param string $thermostat_serial_number The thermostat serial number. Defaults to the first device of the account.
+     *
+     * @return stdClass|bool The object returned by the API call, or FALSE on error.
+     */
+    public function setTargetTemperatureSensor($sensor_serial_number, $thermostat_serial_number = NULL) {
+        $thermostat_serial_number = $this->getDefaultSerial($thermostat_serial_number);
+        $payload = array(
+            'objects' => array(
+                array(
+                    'object_key' => "rcs_settings.$thermostat_serial_number",
+                    'op' => 'MERGE',
+                    'value' => array(
+                        'active_rcs_sensors' => array(),
+                        'rcs_control_setting' => 'OFF',
+                    ),
+                ),
+            )
+        );
+
+        if ($thermostat_serial_number !== $sensor_serial_number) {
+            $payload['objects'][0]['value'] = array(
+                'active_rcs_sensors' => array("kryptonite.$sensor_serial_number"),
+                'rcs_control_setting' => 'OVERRIDE',
+            );
+        }
+        return $this->doPOST('/v5/put', json_encode($payload));
     }
 
     /**
