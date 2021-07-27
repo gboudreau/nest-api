@@ -514,13 +514,23 @@ class Nest
             $infos->demand_response = (object)array(
                 'has_active_event' => false,
                 'has_active_peak_period' => false,
-                'events' => $this->last_status->demand_response->{$serial_number}->active_events
+                'has_user_opted_out' => false,
+                'events' => $this->last_status->demand_response->{$serial_number}->active_events,
             );
             foreach ($infos->demand_response->events as &$event) {
-                $event->is_peak_period_active = $event->peak_period_start_time_utc <= time() && time() < $event->stop_time_utc;
-                $event->is_event_active = $event->start_time_utc <= time() && time() < $event->stop_time_utc;
-                $infos->demand_response->has_active_peak_period = $infos->demand_response->has_active_peak_period || $event->is_peak_period_active;
-                $infos->demand_response->has_active_event = $infos->demand_response->has_active_event || $event->is_event_active;
+                $event = $this->getDemandResponseEventDetails($event->id);
+
+                $is_event_active = $event->start_time_utc <= time() && time() < $event->stop_time_utc;
+                $infos->demand_response->has_active_event = $infos->demand_response->has_active_event || $is_event_active;
+                $infos->demand_response->has_active_peak_period = $infos->demand_response->has_active_peak_period || $event->in_peak_period;
+
+                if ($event->in_peak_period || $is_event_active) {
+                    $infos->demand_response->has_user_opted_out = $event->user_opted_out;
+                }
+
+                //Set these additional properties for non-breaking changes
+                $event->is_peak_period_active = $event->in_peak_period;
+                $event->is_event_active = $is_event_active;
             }
         }
 
@@ -648,6 +658,31 @@ class Nest
             );
         }
         return $this->doPOST('/v5/put', json_encode($payload));
+    }
+
+    /**
+     * Get demand response event details
+     *
+     * @param string $event_id The Nest demand response event id
+     *
+     * @return stdClass|bool The event detail object returned by the API call, or FALSE on error.
+     */
+    protected function getDemandResponseEventDetails($event_id) {
+        $payload = array(
+            'objects' => array(
+                array('object_key' => $event_id)
+            )
+        );
+
+        $event_response = $this->doPOST('/v5/subscribe', json_encode($payload));
+        if (empty($event_response->objects)) {
+            return $event_response;
+         }
+
+         $event_detail = $event_response->objects[0]->value;
+         //Note: cruise_control_temperature is 0/32 until the event is active
+         $event_detail->cruise_control_temperature = $this->temperatureInUserScale($event_detail->cruise_control_temperature);
+         return $event_detail;
     }
 
     /**
