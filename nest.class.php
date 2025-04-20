@@ -157,7 +157,7 @@ class Nest
             }
             $weather = $this->doGET($url);
         } catch (RuntimeException $ex) {
-            // NESTAPI_ERROR_NOT_JSON_RESPONSE is kinda normal. The forecast API will often return a '502 Bad Gateway' response... meh.
+            // NESTAPI_ERROR_NOT_JSON_RESPONSE is kinda normal. The forecast API will often return a '502 Bad Gateway' or '503 Service Unavailable' response... meh.
             if ($ex->getCode() != NESTAPI_ERROR_NOT_JSON_RESPONSE) {
                 throw new RuntimeException("Unexpected issue fetching forecast.", $ex->getCode(), $ex);
             }
@@ -1536,7 +1536,10 @@ class Nest
             if (!is_object($json)) {
                 throw new RuntimeException("Error: HTTP {$info['http_code']} from request to $url. Response: " . str_replace(array("\n","\r"), '', $response), NESTAPI_ERROR_API_OTHER_ERROR);
             }
-            throw new RuntimeException("Error: HTTP {$info['http_code']} from request to $url. JSON error: $json->error - $json->error_description", NESTAPI_ERROR_API_JSON_ERROR);
+            if (isset($json->error)) {
+                throw new RuntimeException("Error: HTTP {$info['http_code']} from request to $url. JSON error: $json->error - $json->error_description", NESTAPI_ERROR_API_JSON_ERROR);
+            }
+            throw new RuntimeException("Error: HTTP {$info['http_code']} from request to $url. JSON error: " . json_encode($json), NESTAPI_ERROR_API_JSON_ERROR);
         }
 
         // No body returned; return a boolean value that confirms a 200 OK was returned.
