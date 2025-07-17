@@ -70,6 +70,8 @@ class Nest
     protected $cache_file;
     protected $cache_expiration;
     protected $last_status;
+    protected $cookies;
+	protected $issue_token;
 
     /**
      * Constructor
@@ -1092,8 +1094,8 @@ class Nest
         $connection_info = $this->last_status->track->{$serial_number};
         return (object) array(
             'online' => $connection_info->online,
-            'last_connection' => date(DATETIME_FORMAT, $connection_info->last_connection/1000),
-            'last_connection_UTC' => gmdate(DATETIME_FORMAT, $connection_info->last_connection/1000),
+            'last_connection' => date(DATETIME_FORMAT, intval($connection_info->last_connection/1000)),
+            'last_connection_UTC' => gmdate(DATETIME_FORMAT, intval($connection_info->last_connection/1000)),
             'wan_ip' => @$connection_info->last_ip,
             'local_ip' => $this->last_status->device->{$serial_number}->local_ip,
             'mac_address' => $this->last_status->device->{$serial_number}->mac_address
