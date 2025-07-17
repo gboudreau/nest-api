@@ -71,7 +71,7 @@ class Nest
     protected $cache_expiration;
     protected $last_status;
     protected $cookies;
-	protected $issue_token;
+    protected $issue_token;
 
     /**
      * Constructor
